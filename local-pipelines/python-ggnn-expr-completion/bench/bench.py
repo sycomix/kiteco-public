@@ -61,7 +61,7 @@ def depth_results():
     recs = []
     for depth in range(50, 260, 10):
         res = measure(node_depth=depth)
-        print("depth: {}, res: {}".format(depth, res))
+        print(f"depth: {depth}, res: {res}")
         rec = res.to_dict()
         rec["depth"] = depth
         recs.append(rec)
@@ -73,7 +73,7 @@ def vocab_scale_results():
     recs = []
     for scale in np.linspace(0.3, 1.5, num=20):
         res = measure(vocab_scale=scale)
-        print("scale: {}, res: {}".format(scale, res))
+        print(f"scale: {scale}, res: {res}")
         rec = res.to_dict()
         rec["scale"] = scale
         recs.append(rec)
@@ -85,7 +85,7 @@ def node_count_results():
     recs = []
     for nodes in range(400, 2000, 100):
         res = measure(nodes=nodes, edges=2100)
-        print("nodes: {}, res: {}".format(nodes, res))
+        print(f"nodes: {nodes}, res: {res}")
         rec = res.to_dict()
         rec["nodes"] = nodes
         recs.append(rec)
@@ -97,7 +97,7 @@ def edge_count_results():
     recs = []
     for edges in range(400, 2000, 100):
         res = measure(nodes=400, edges=edges)
-        print("edges: {}, res: {}".format(edges, res))
+        print(f"edges: {edges}, res: {res}")
         rec = res.to_dict()
         rec["edges"] = edges
         recs.append(rec)

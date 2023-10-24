@@ -16,16 +16,16 @@ from kite_airflow.slack_alerts import task_fail_slack_alert
 
 
 BUCKET = 'kite-youtube-data' if common_utils.is_production() else 'kite-metrics-test'
-SCRATCH_SPACE_LOC = 's3://{}/athena-scratch-space/'.format(BUCKET)
+SCRATCH_SPACE_LOC = f's3://{BUCKET}/athena-scratch-space/'
 
 DATABASE = 'prod_kite_link_stats_youtube' if common_utils.is_production() else 'kite_link_stats_youtube'
 TABLE_CHANNELS = {
     'name': 'kite_link_stats_youtube_channels',
-    'data_location': 's3://{}/youtube-dashboard/channels/'.format(BUCKET),
+    'data_location': f's3://{BUCKET}/youtube-dashboard/channels/',
 }
 TABLE_VIDEOS = {
     'name': 'kite_link_stats_youtube_videos',
-    'data_location': 's3://{}/youtube-dashboard/videos/'.format(BUCKET),
+    'data_location': f's3://{BUCKET}/youtube-dashboard/videos/',
 }
 
 default_args = {
@@ -53,8 +53,8 @@ schema_operators = []
 for table in [TABLE_CHANNELS, TABLE_VIDEOS]:
     drop_op = AWSAthenaOperator(
         aws_conn_id=configs.AWS_CONN_ID,
-        task_id='drop_table_{}'.format(table['name']),
-        query='DROP TABLE IF EXISTS {}'.format(table['name']),
+        task_id=f"drop_table_{table['name']}",
+        query=f"DROP TABLE IF EXISTS {table['name']}",
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database=DATABASE,
         dag=kite_link_stats_dag,
@@ -63,8 +63,8 @@ for table in [TABLE_CHANNELS, TABLE_VIDEOS]:
 
     create_op = AWSAthenaOperator(
         aws_conn_id=configs.AWS_CONN_ID,
-        task_id='create_table_{}'.format(table['name']),
-        query='athena/tables/{}.tmpl.sql'.format(table['name']),
+        task_id=f"create_table_{table['name']}",
+        query=f"athena/tables/{table['name']}.tmpl.sql",
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database=DATABASE,
         dag=kite_link_stats_dag,
@@ -77,7 +77,7 @@ for table in [TABLE_CHANNELS, TABLE_VIDEOS]:
 get_channels_op = AWSAthenaOperator(
     aws_conn_id=configs.AWS_CONN_ID,
     task_id='get_channels',
-    query='SELECT * FROM {}'.format(TABLE_CHANNELS['name']),
+    query=f"SELECT * FROM {TABLE_CHANNELS['name']}",
     output_location=SCRATCH_SPACE_LOC,
     database=DATABASE,
     dag=kite_link_stats_dag,
@@ -87,7 +87,7 @@ schema_operators >> get_channels_op
 get_videos_op = AWSAthenaOperator(
     aws_conn_id=configs.AWS_CONN_ID,
     task_id='get_videos',
-    query='SELECT * FROM {}'.format(TABLE_VIDEOS['name']),
+    query=f"SELECT * FROM {TABLE_VIDEOS['name']}",
     output_location=SCRATCH_SPACE_LOC,
     database=DATABASE,
     dag=kite_link_stats_dag,
@@ -145,12 +145,13 @@ def update_videos_from_all_channels(ti, yt_client):
                 search_budget,
             )
 
-            for video_search_item in video_search_list:
-                new_video_list.append({
+            new_video_list.extend(
+                {
                     'id': utils.get_video_id_of_search_item(video_search_item),
                     'channel_id': channel_id,
-                })
-
+                }
+                for video_search_item in video_search_list
+            )
             # only update channel attributes if videos are found (also handles YT out of quota cases)
             if(video_search_list):
                 last_search_item = video_search_list[- 1]
@@ -178,18 +179,19 @@ def update_videos_from_all_channels(ti, yt_client):
             all_activity_list,
         )
 
-        for video_activity in video_activity_list:
-            new_video_list.append({
+        new_video_list.extend(
+            {
                 'id': utils.get_id_of_video_activity(video_activity),
                 'channel_id': channel_id,
-            })
-
+            }
+            for video_activity in video_activity_list
+        )
         # update the last_updated of channel which will help is in limiting future searches
         channel['last_updated'] = common_utils.get_date_time_in_ISO()
 
     files.write_channels_on_file(channel_list)
 
-    if len(new_video_list) > 0:
+    if new_video_list:
         files.write_videos_on_file(new_video_list)
 
     if exception:
@@ -208,17 +210,18 @@ def get_snapshots_list(video_list, cached_urls_dict):
     if not video_list:
         return
 
-    snapshot_list = []
-    for video_item in video_list:
-        snapshot_list.append({
+    return [
+        {
             'video_id': utils.get_id_of_video_item(video_item),
             'description': utils.get_description_of_video_item(video_item),
-            'is_link_present': utils.is_link_present_in_description(video_item, cached_urls_dict), # also updates the cache in case of shorten urls
+            'is_link_present': utils.is_link_present_in_description(
+                video_item, cached_urls_dict
+            ),  # also updates the cache in case of shorten urls
             'views': utils.get_views_of_video_item(video_item),
             'timestamp': common_utils.get_date_time_in_ISO(),
-        })
-
-    return snapshot_list
+        }
+        for video_item in video_list
+    ]
 
 
 def update_snapshots_of_all_videos(ti, yt_client, new_video_list):

@@ -14,7 +14,7 @@ from stdlib_list import stdlib_list
 def pca(imports: List[str], pkglist: List[str]) -> None:
     pkglist.sort()
 
-    idx_to_pkg = {k: v for k, v in enumerate(pkglist)}
+    idx_to_pkg = dict(enumerate(pkglist))
     pkg_to_idx = {v: k for k, v in idx_to_pkg.items()}
 
     A = np.zeros((len(pkglist), len(pkglist)))
@@ -52,9 +52,7 @@ def filter_packages(pkglist_file: str, exclude_stdlib: Optional[bool] = False, o
 
     pkgs = []
     with open(pkglist_file) as lines:
-        for line in lines:
-            pkgs.append(line.strip())
-
+        pkgs.extend(line.strip() for line in lines)
     print("packagelist contains %d packages" % len(pkgs))
 
     if exclude_stdlib:
@@ -81,8 +79,7 @@ def filter_imports(imports_file: str, pkglist: List[str]) -> List[List[str]]:
     with open(imports_file) as lines:
         for line in lines:
             file_imports = json.loads(line)
-            file_imports = [i for i in file_imports if i in pkglist]
-            if len(file_imports) > 0:
+            if file_imports := [i for i in file_imports if i in pkglist]:
                 imports.append(file_imports)
 
     return imports

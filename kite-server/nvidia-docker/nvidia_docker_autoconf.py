@@ -19,9 +19,8 @@ def configure(path='/etc/docker/daemon.json', key='NVIDIA-GPU'):
         conf = {}
 
     resources = conf.get('node-generic-resources', [])
-    resources = [r for r in resources if not r.startswith(key+'=')]
-    for uuid in get_device_uuids():
-        resources.append(key+'='+uuid)
+    resources = [r for r in resources if not r.startswith(f'{key}=')]
+    resources.extend(f'{key}={uuid}' for uuid in get_device_uuids())
     conf['node-generic-resources'] = resources
 
     with open(path, 'w') as f:

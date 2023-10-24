@@ -71,7 +71,9 @@ def main():
                 f.write(realjson.dumps(info))
                 f.write('\n')
             except UnicodeDecodeError as e:
-                logger.error("Unable to dump info for %s due to unicode error" % info["canonical_name"])
+                logger.error(
+                    f'Unable to dump info for {info["canonical_name"]} due to unicode error'
+                )
 
     # Look at which packages were imported as a result of this exploration
     if args.dependencies:

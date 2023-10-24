@@ -101,7 +101,7 @@ if _PY3:
             exec(code, module.__dict__)
             # if we've gotten this far, the transformed AST failed to compile, while the original compiled
             # successfully; so log and keep going.
-            logging.info("failed to compile transformed ast for module {}".format(self.spec.name))
+            logging.info(f"failed to compile transformed ast for module {self.spec.name}")
 else:
     # we must modify __builtin__ directly; if we try to put a copy of __builtin__ into the module namespace,
     # Python automatically executes in a "restricted execution mode" (https://docs.python.org/2/library/restricted.html)
@@ -153,7 +153,7 @@ else:
                 exec(code, mod.__dict__)
                 # if we've gotten this far, the transformed AST failed to compile, while the original compiled
                 # successfully; so log and keep going.
-                logging.info("failed to compile transformed ast for module {}".format(self.name))
+                logging.info(f"failed to compile transformed ast for module {self.name}")
             except Exception:
                 # both the transformed & original ASTs failed to compile; so clean up and raise the exception.
                 if del_on_error:

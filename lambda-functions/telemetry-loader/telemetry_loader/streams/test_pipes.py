@@ -17,4 +17,4 @@ async def test_dict_reader():
 
 async def test_json_pipe():
     run, _ = stream([b'{"a": 1}\n', b'{"b": 2}\n']) | json_pipe() | consume
-    assert [line for line in await run()] == [{'a': 1}, {'b': 2}]
+    assert list(await run()) == [{'a': 1}, {'b': 2}]

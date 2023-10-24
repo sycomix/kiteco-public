@@ -21,9 +21,7 @@ def _api(method, url, data=None):
     if data is None:
         data = {}
 
-    response = requests.request(method, base+url, headers=headers, json=data)
-
-    return response
+    return requests.request(method, base+url, headers=headers, json=data)
 
 class Dashboard(object):
     # pylint: disable=attribute-defined-outside-init
@@ -38,16 +36,11 @@ class Dashboard(object):
         base.graphs = graphs
 
         # if no values are given, return the base (this also prevents infinite copy recursion)
-        if not values:
-            return [base]
-
-        # otherwise, return copy of the base
-        return base.copy(**values)
+        return [base] if not values else base.copy(**values)
 
     def delete(self):
         """Delete the dashboard"""
-        resp = _api("DELETE", "/dashboards/{}".format(self.dash_id))
-        return resp
+        return _api("DELETE", f"/dashboards/{self.dash_id}")
 
     def create(self):
         """Create a new dashboard"""
@@ -81,13 +74,11 @@ class Dashboard(object):
     @staticmethod
     def get_all():
         """Get all dashboards"""
-        dashboards = []
-
         resp = _api("GET", "/dashboards").json()
-        for dash in resp:
-            dashboards.append(Dashboard.new(name=dash["name"], dash_id=dash["id"]).pop())
-
-        return dashboards
+        return [
+            Dashboard.new(name=dash["name"], dash_id=dash["id"]).pop()
+            for dash in resp
+        ]
 
     @property
     def strname(self):
@@ -95,7 +86,7 @@ class Dashboard(object):
         return self.name.safe_substitute()
 
     def __repr__(self):
-        return "Dashboard({} [id:{}])".format(self.strname, self.dash_id)
+        return f"Dashboard({self.strname} [id:{self.dash_id}])"
 
     def to_dict(self):
         """Convert to dictionary for creating"""
@@ -121,16 +112,11 @@ class Graph(object):
         base.graph_id = graph_id
 
         # if no values are given, return the base (this also prevents infinite copy recursion)
-        if not values:
-            return [base]
-
-        # otherwise, return copy of the base
-        return base.copy(**values)
+        return [base] if not values else base.copy(**values)
 
     def delete(self):
         """Delete the graph"""
-        resp = _api("DELETE", "/graphs/{}".format(self.graph_id))
-        return resp
+        return _api("DELETE", f"/graphs/{self.graph_id}")
 
     def create(self):
         """Create a new graph"""
@@ -204,27 +190,24 @@ class Graph(object):
 
     def update(self):
         """Updates the graph"""
-        resp = _api("PATCH", "/graphs/{}".format(self.graph_id), data=self.to_dict())
-        return resp
+        return _api("PATCH", f"/graphs/{self.graph_id}", data=self.to_dict())
 
     @staticmethod
     def get_all():
         """Get all graphs"""
-        graphs = []
-
         resp = _api("GET", "/graphs").json()
-        for graph in resp:
-            graphs.append(Graph.new(
+        return [
+            Graph.new(
                 title=graph["title"],
                 metrics=[Metric.new(metric).pop() for metric in graph["metrics"]],
                 units=graph["units"],
                 stacked=graph["stacked"],
                 continuous=graph["continuous"],
                 dash_id=graph["dashboard_id"],
-                graph_id=graph["id"]
-                ).pop())
-
-        return graphs
+                graph_id=graph["id"],
+            ).pop()
+            for graph in resp
+        ]
 
     @property
     def strtitle(self):
@@ -232,7 +215,7 @@ class Graph(object):
         return self.title.safe_substitute()
 
     def __repr__(self):
-        return "Graph({} [dash:{}])".format(self.strtitle, self.dash_id)
+        return f"Graph({self.strtitle} [dash:{self.dash_id}])"
 
     def to_dict(self):
         """Convert to dictionary for creating"""
@@ -257,11 +240,7 @@ class Metric(object):
         base.metric = string.Template(metric)
 
         # if no values are given, return the base (this also prevents infinite copy recursion)
-        if not values:
-            return [base]
-
-        # otherwise, return copy of the base
-        return base.copy(**values)
+        return [base] if not values else base.copy(**values)
 
     def sub(self, **values):
         """Implement `sub` for `cross_product_copy`"""
@@ -284,7 +263,7 @@ class Metric(object):
         return self.strmetric
 
     def __repr__(self):
-        return "Metric({})".format(self.strmetric)
+        return f"Metric({self.strmetric})"
 
 def cross_product_copy(template_copiable, **values):
     """Copy the object by substituting values, doing a cross-product when the value is a list
@@ -328,7 +307,7 @@ def clean_keys(keys, *templates):
     cleaned = {}
     for k, v in keys.items():
         for template in templates:
-            if "$"+k in template.template:
+            if f"${k}" in template.template:
                 cleaned[k] = v
 
     return cleaned
@@ -370,9 +349,7 @@ def update(new_dashboards):
         if dash.strname not in dashmap:
             dashboards_to_create.append(dash)
             # also create graphs
-            for graph in dash.graphs:
-                graphs_to_create.append(graph)
-        # if it exists, don't delete
+            graphs_to_create.extend(iter(dash.graphs))
         else:
             dashboards_to_delete_names.remove(dash.strname)
 
@@ -383,13 +360,11 @@ def update(new_dashboards):
                     # set dash id for graph
                     graph.dash_id = dashmap[dash.strname].dash_id
                     graphs_to_create.append(graph)
-                # if it exists, don't delete
                 else:
                     graphs_to_delete_titles[dash.strname].remove(graph.strtitle)
                     # check if it needs to be updated
                     old_graph = graphmap[dash.strname][graph.strtitle]
-                    diff = old_graph.update_diff(graph)
-                    if diff:
+                    if diff := old_graph.update_diff(graph):
                         graphs_to_update.append(old_graph)
                         graph_diffs.append(diff)
 
@@ -459,14 +434,14 @@ def print_preview(new_dashes, new_graphs, updated_graphs, deleted_dashes, delete
     print("\nNew graphs\n")
     for graph in new_graphs:
         dashname = dash_idmap[graph.dash_id]
-        print("[{}] {}".format(dashname, graph))
+        print(f"[{dashname}] {graph}")
 
     print("\nUpdated graphs\n")
     for df in updated_graphs:
         title = df.pop("title")
         dashname = dash_idmap[df.pop("dash_id")]
         for k, v in df.items():
-            print("[{}][{}]".format(dashname, title), k+":", v[0], "->", v[1])
+            print(f"[{dashname}][{title}]", f"{k}:", v[0], "->", v[1])
 
     print("\nDashboards to be deleted\n")
     for dash in deleted_dashes:
@@ -475,13 +450,9 @@ def print_preview(new_dashes, new_graphs, updated_graphs, deleted_dashes, delete
     print("\nGraphs to be deleted\n")
     for graph in deleted_graphs:
         dashname = dash_idmap[graph.dash_id]
-        print("[{}] {}".format(dashname, graph))
+        print(f"[{dashname}] {graph}")
 
 if __name__ == "__main__":
     # read from file (get filename if it exists)
-    if len(sys.argv) == 2:
-        data = read_yaml.read(sys.argv[1])
-    else:
-        data = read_yaml.read()
-
+    data = read_yaml.read(sys.argv[1]) if len(sys.argv) == 2 else read_yaml.read()
     update(data)

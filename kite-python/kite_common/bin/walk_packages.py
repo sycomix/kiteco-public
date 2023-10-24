@@ -23,7 +23,7 @@ def walk_subpackages(name, onerror=None):
             raise
     else:
         path = getattr(sys.modules[name], '__path__', None) or []
-        for _, name, _ in pkgutil.walk_packages(path, name+'.', onerror):
+        for _, name, _ in pkgutil.walk_packages(path, f'{name}.', onerror):
             yield name
 
 

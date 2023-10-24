@@ -60,7 +60,7 @@ def invoke(s3_path):
         keys.append(parsed.path[1:])
 
     for key in keys:
-        logger.info("Running {}".format(key))
+        logger.info(f"Running {key}")
         payload = json.dumps({'Records': [
             {'eventSource': 'aws:s3', 's3': {'bucket': {'name': parsed.netloc}, 'object': {'key': key}}}
         ]})
@@ -99,25 +99,18 @@ def process_dl_queue():
             client.delete_message(QueueUrl=dl_queue_url, ReceiptHandle=msg['ReceiptHandle'])
             continue
 
-        click.echo("message={}".format(msg['Body']))
+        click.echo(f"message={msg['Body']}")
 
         if msg_body['Records'][0].get('eventSource') == 'aws:s3' and msg_body['Records'][0]['s3']['object']['key'].startswith('athena-results'):
             client.delete_message(QueueUrl=dl_queue_url, ReceiptHandle=msg['ReceiptHandle'])
             continue
 
-        # value = click.prompt('Try re-running?', type=bool)
-        if True:
-            res = lambda_client.invoke(FunctionName='telemetry-loader-elastic', LogType='Tail', Payload=msg['Body'])
-            if not res.get('FunctionError'):
-                client.delete_message(QueueUrl=dl_queue_url, ReceiptHandle=msg['ReceiptHandle'])
-                continue
-            click.echo("log={}".format(base64.b64decode(res['LogResult'])))
+        res = lambda_client.invoke(FunctionName='telemetry-loader-elastic', LogType='Tail', Payload=msg['Body'])
+        if not res.get('FunctionError'):
+            client.delete_message(QueueUrl=dl_queue_url, ReceiptHandle=msg['ReceiptHandle'])
+            continue
+        click.echo(f"log={base64.b64decode(res['LogResult'])}")
         continue
-
-        value = click.prompt('Delete from queue?', type=bool)
-        if not value:
-            return
-        client.delete_message(QueueUrl=dl_queue_url, ReceiptHandle=msg['ReceiptHandle'])
 
 
 if __name__ == '__main__':

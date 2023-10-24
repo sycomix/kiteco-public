@@ -26,11 +26,9 @@ class Node(object):
 def walk(node):
     yield node
     if isinstance(node.left_child, Node):
-        for subnode in walk(node.left_child):
-            yield subnode
+        yield from walk(node.left_child)
     if isinstance(node.right_child, Node):
-        for subnode in walk(node.right_child):
-            yield subnode
+        yield from walk(node.right_child)
 
 
 def drop(x, node):

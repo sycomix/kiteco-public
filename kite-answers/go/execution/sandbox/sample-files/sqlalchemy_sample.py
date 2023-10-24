@@ -13,14 +13,14 @@ class User(base):
     uid = Column(Integer, primary_key=True)
     username = Column(String)
     def __repr__(self):
-        return "User:" + self.username
+        return f"User:{self.username}"
 
 class Car(base):
     __tablename__ = "cars"
     cid = Column(Integer, primary_key=True)
     model = Column(String)
     def __repr__(self):
-        return "Car:" + self.model 
+        return f"Car:{self.model}" 
         
     owner_name = Column(Integer, ForeignKey("users.username"))
 

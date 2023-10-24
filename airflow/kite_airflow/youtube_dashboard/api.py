@@ -63,13 +63,11 @@ def filter_video_activity_from_list(activity_list):
     Filters upload video activities from all activities
     '''
 
-    new_upload_video_activity_list = []
-
-    for activity in activity_list:
-        if activity['snippet']['type'] == 'upload':
-            new_upload_video_activity_list.append(activity)
-
-    return new_upload_video_activity_list
+    return [
+        activity
+        for activity in activity_list
+        if activity['snippet']['type'] == 'upload'
+    ]
 
 
 def get_unique_upload_video_activity_list(video_activity_list):
@@ -88,7 +86,7 @@ def get_unique_upload_video_activity_list(video_activity_list):
     for video_activity in video_activity_list:
         video_id = utils.get_id_of_video_activity(video_activity)
 
-        if not video_id in video_ids:
+        if video_id not in video_ids:
             video_ids.add(video_id)
             unique_video_activity_list.append(video_activity)
 

@@ -41,7 +41,7 @@ def trim_leading_spaces(text):
                 l.append(line)
                 continue
             l.append(line[min_spaces:])
-        if len(l) > 0:
+        if l:
             modified = ''.join(l)
 
     return modified

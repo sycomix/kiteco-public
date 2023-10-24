@@ -129,13 +129,13 @@ def handle_status(status):
 
 @app.route("/useragent")
 def handle_useragent():
-	return "Hey there, %s" % request.headers.get('User-Agent', '<no user agent received>')
+    return f"Hey there, {request.headers.get('User-Agent', '<no user agent received>')}"
 
 
 @app.route("/queryparams")
 def handle_queryparams():
-	lines = [key + "=" + val for key, val in request.args.items()]
-	return "Received the following query parameters:\n" + "\n".join(lines)
+    lines = [f"{key}={val}" for key, val in request.args.items()]
+    return "Received the following query parameters:\n" + "\n".join(lines)
 
 
 @app.route("/submitform", methods=["POST"])
@@ -157,22 +157,20 @@ def handle_redirect():
 
 @app.route("/api/article/<id>", methods=["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH"])
 def handle_api(id):
-	if request.method == "GET":
-		data = article.copy()
-		data["id"] = id
-		return json.dumps(data)
-	elif request.method == "POST":
-		return "Added article with ID %d" + str(id)
-	elif request.method == "HEAD":
-		return ""
-	elif request.method == "PUT":
-		return "Updated article with ID " + str(id)
-	elif request.method == "DELETE":
-		return "Deleted article with ID " + str(id)
-	elif request.method == "PATCH":
-		return "Updated article with ID " + str(id)
-	else:
-		return "Method not allowed: "+request.method, 405
+    if request.method == "DELETE":
+        return f"Deleted article with ID {str(id)}"
+    elif request.method == "GET":
+        data = article.copy()
+        data["id"] = id
+        return json.dumps(data)
+    elif request.method == "HEAD":
+        return ""
+    elif request.method == "POST":
+        return f"Added article with ID %d{str(id)}"
+    elif request.method in ["PUT", "PATCH"]:
+        return f"Updated article with ID {str(id)}"
+    else:
+        return f"Method not allowed: {request.method}", 405
 
 
 if __name__ == '__main__':

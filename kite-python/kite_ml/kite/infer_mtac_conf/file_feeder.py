@@ -29,7 +29,7 @@ class FileFeeder(DataFeeder):
         line = self._file.readline()
         if not line:
             if self._counter == 0:
-                raise Exception("reached end of {} without reading lines".format(self._filename))
+                raise Exception(f"reached end of {self._filename} without reading lines")
             self._reset()
             return self.next()
 
@@ -63,21 +63,23 @@ class FileFeederSplit(object):
         num_train = 0
         val_offset = 0
 
-        assert 0 < val_fraction < 1, "val_fraction out of range: {}".format(val_fraction)
+        assert 0 < val_fraction < 1, f"val_fraction out of range: {val_fraction}"
 
         with open(json_filename, 'r') as f:
-            lines = 0
-            for _ in f:
-                lines += 1
-
+            lines = sum(1 for _ in f)
             num_train = int(lines * (1.0 - val_fraction))
             num_val = int(lines * val_fraction)
 
-            assert num_train > 0, "{} has too few samples ({}) to create train set".format(json_filename, lines)
-            assert num_val > 0, "{} has too few samples ({}) to create validation set".format(json_filename, lines)
+            assert (
+                num_train > 0
+            ), f"{json_filename} has too few samples ({lines}) to create train set"
+            assert (
+                num_val > 0
+            ), f"{json_filename} has too few samples ({lines}) to create validation set"
 
-            logging.info("{} has {} samples, will use {} for train and {} for validation".format(
-                json_filename, lines, num_train, num_val))
+            logging.info(
+                f"{json_filename} has {lines} samples, will use {num_train} for train and {num_val} for validation"
+            )
 
             # find the offset of the first validation sample
             f.seek(0)

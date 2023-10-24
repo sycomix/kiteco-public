@@ -21,7 +21,7 @@ class QuantizableEmbedding(object):
             self._value = tf.Variable(init_value, dtype=np.float32, name=name)
 
     def lookup(self, indices: tf.Tensor, name: Optional[str] = None) -> tf.Tensor:
-        name = name or self._name + "/lookup"
+        name = name or f"{self._name}/lookup"
 
         if self._quantized:
             return tf.contrib.quantization.dequantize(
@@ -80,7 +80,7 @@ class CodeBookEmbedding(object):
             )
 
     def lookup(self, indices: tf.Tensor, name: Optional[str] = None) -> tf.Tensor:
-        name = name or self._name + "_lookup"
+        name = name or f"{self._name}_lookup"
         if not self._compressed:
             return tf.nn.embedding_lookup(self._value, indices, name=name)
 

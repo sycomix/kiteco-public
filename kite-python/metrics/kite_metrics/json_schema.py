@@ -11,7 +11,12 @@ from kite_metrics.loader import load_json_schema
 def main(out, full):
     for schema_name in ['kite_status', 'types']:
         if out:
-            file = open(os.path.abspath(os.path.join(out, '{}.schema.json'.format(schema_name))), 'w')
+            file = open(
+                os.path.abspath(
+                    os.path.join(out, f'{schema_name}.schema.json')
+                ),
+                'w',
+            )
             writer = file.write
         else:
             writer = click.echo
@@ -20,7 +25,7 @@ def main(out, full):
         try:
             writer(json.dumps(schema, indent=2))
         except:
-            click.echo("Error writing schema {}".format(schema))
+            click.echo(f"Error writing schema {schema}")
 
 
 if __name__ == '__main__':

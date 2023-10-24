@@ -85,9 +85,7 @@ def compute_most_freq_words_for_file(data_file, n):
     sorted_words = sorted(word_freq.items(), key=get_sort_key, reverse=True)
 
     most_freq_words = sorted_words[:n]
-    most_freq_words = sorted([tup[0] for tup in most_freq_words])
-
-    return most_freq_words
+    return sorted([tup[0] for tup in most_freq_words])
 
 
 def compute_char_hash_vec(text, n):
@@ -172,7 +170,7 @@ def compute_special_ch_vec(text):
 def compute_most_freq_words_feature_vec(text, most_freq_words):
     feat_vec = []
 
-    for idx, word in enumerate(most_freq_words):
+    for word in most_freq_words:
         if word in text:
             feat_vec.append(1)
         else:
@@ -226,9 +224,7 @@ def compute_most_freq_words(files, n):
 
 
 def feat_vec_to_string(feat_vec):
-    result = ""
-    for feat in feat_vec:
-        result += "{:.5f}".format(feat)
+    result = "".join("{:.5f}".format(feat) for feat in feat_vec)
     return result.strip()
 
 
@@ -238,7 +234,7 @@ def evaluate(model, test_files, output_dir):
         html_output = evaluate_and_output_pretty_html(
             model,
             test_file)
-        with open(os.path.join(output_dir, "output_" + os.path.basename(test_file)), "w+") as f:
+        with open(os.path.join(output_dir, f"output_{os.path.basename(test_file)}"), "w+") as f:
             f.write(html_output)
 
 
@@ -250,11 +246,10 @@ def evaluate_and_output_pretty_html(model, data):
     purposes (creates the HTML file automatically).
     """
 
-    encountered = set()
-
     table = "<table align='center'>"
     total = 0
     correct = 0
+    encountered = set()
     with open(data) as f:
         for line in f:
             if line in encountered:
@@ -274,9 +269,7 @@ def evaluate_and_output_pretty_html(model, data):
     table += "</table>"
 
     html = "<html><body style='font-family:sans-serif'>"
-    html += "<h1 align='center'>&#37; identified as errors in file " + \
-        os.path.basename(data) + ":<br> " + \
-        str(float(correct) / float(total) * 100) + "</h1>"
+    html += f"<h1 align='center'>&#37; identified as errors in file {os.path.basename(data)}:<br> {str(float(correct) / float(total) * 100)}</h1>"
     html += table
     html += "</body></html>"
     return html
@@ -349,7 +342,7 @@ def export_model(model, kernel, model_dir):
         'dual_coefs': dual_coefs,
         'support_vecs': support_vecs}
 
-    with open(os.path.join(model_dir, kernel + "_" + MODEL_FILE_JSON_SUFFIX), "w+") as model_file:
+    with open(os.path.join(model_dir, f"{kernel}_{MODEL_FILE_JSON_SUFFIX}"), "w+") as model_file:
         json.dump(model_params, model_file)
 
 
@@ -360,7 +353,7 @@ def save_feature_data(data, model_dir):
 
 def pickle_model(model, kernel, model_dir):
     """pickle_raw_model dumps the raw svm model."""
-    filename = os.path.join(model_dir, kernel + "_" + MODEL_FILE_PKL_SUFFIX)
+    filename = os.path.join(model_dir, f"{kernel}_{MODEL_FILE_PKL_SUFFIX}")
     with open(filename, 'wb') as fout:
         pickle.dump(model, fout)
 

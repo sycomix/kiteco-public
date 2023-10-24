@@ -23,5 +23,5 @@ def node_to_code(node):
     gen.visit(node)
     code = gen.line
     if code.startswith("(") and code.endswith(")"):
-        code = code[1:len(code)-1]
+        code = code[1:-1]
     return code

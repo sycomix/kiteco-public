@@ -93,7 +93,7 @@ class LexicalModel(BaseModel):
         self._build_train_prediction_op()
         self._loss = self._build_loss_op()
         self._scalars = self._build_scalars()
-        self._summaries = {k: v for k, v in self._scalars.items()}
+        self._summaries = dict(self._scalars.items())
 
         # TODO: empty string is global variable scope, this is a hack for backwards
         # compat to make sure we can reuse variables when we create the test graph
@@ -471,12 +471,11 @@ class LexicalModel(BaseModel):
         return self._summaries
 
     def tfserving_inputs_dict(self) -> Dict[str, tf.Tensor]:
-        inputs = {
+        return {
             'context': self._placeholders.context,
             'context_mask': self._placeholders.context_mask,
             'valid_prefix_ids': self._search_bundle.phs.valid_prefix_ids,
         }
-        return inputs
 
     def tfserving_outputs_dict(self) -> Dict[str, tf.Tensor]:
         return {
@@ -500,7 +499,7 @@ def scatter_update_3d(tensor, idxs, updates, name=''):
     rows = tf.cast(tf.range(batch), idxs.dtype)
 
     # [batch] -> [batch, 1, 1]
-    for dim in range(2):
+    for _ in range(2):
         rows = tf.expand_dims(rows, axis=1)
 
     # [batch, num_rows, 1]

@@ -75,7 +75,9 @@ class Embeddings(object):
             elif self._config.type_pooling is PoolingOpt.MAX:
                 type_pool_op = tf.segment_max
             else:
-                raise AssertionError("unrecognized type pooling type {}".format(self._config.type_pooling))
+                raise AssertionError(
+                    f"unrecognized type pooling type {self._config.type_pooling}"
+                )
 
             # [num nodes, type embed depth]
             node_types = type_pool_op(all_node_types, types.sample_ids, name='node_types')
@@ -90,7 +92,9 @@ class Embeddings(object):
             elif self._config.subtoken_pooling is PoolingOpt.MAX:
                 subtoken_pool_op = tf.segment_max
             else:
-                raise AssertionError("unrecognized sub-token pooling type {}".format(self._config.type_pooling))
+                raise AssertionError(
+                    f"unrecognized sub-token pooling type {self._config.type_pooling}"
+                )
 
             # [num nodes, sub token embed depth]
             node_subtokens = subtoken_pool_op(all_node_subtokens, subtokens.sample_ids, name='node_subtokens')

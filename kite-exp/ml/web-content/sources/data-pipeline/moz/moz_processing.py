@@ -43,12 +43,9 @@ def parse_so_moz_datafile(file, result_list):
 
 def parse_moz_files(moz_data_folder, output_file):
     result = {}
-    total_count = 0
     files = [join(moz_data_folder, f) for f in listdir(moz_data_folder) if isfile(join(moz_data_folder, f))]
 
-    for f in files:
-        total_count += parse_so_moz_datafile(f, result)
-
+    total_count = sum(parse_so_moz_datafile(f, result) for f in files)
     if output_file:
         with open(output_file,  "w") as outfile:
             json.dump(result, outfile)

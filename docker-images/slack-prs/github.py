@@ -11,29 +11,34 @@ REPO = "kiteco/kiteco"
 
 
 def get(url):
-	r = requests.get("https://api.github.com" + url, headers={"Authorization": "token "+API_TOKEN})
+	r = requests.get(
+		f"https://api.github.com{url}",
+		headers={"Authorization": f"token {API_TOKEN}"},
+	)
 	msg = r.json()
 	if r.status_code != 200:
-		raise Exception("Failed to get %s: github said '%s'" % (url, msg["message"]))
+		raise Exception(f"""Failed to get {url}: github said '{msg["message"]}'""")
 	return msg
 
 
 def patch(url, payload):
-	r = requests.patch("https://api.github.com" + url,
-		headers={"Authorization": "token "+API_TOKEN},
-		data=json.dumps(payload))
+	r = requests.patch(
+		f"https://api.github.com{url}",
+		headers={"Authorization": f"token {API_TOKEN}"},
+		data=json.dumps(payload),
+	)
 	msg = r.json()
 	if r.status_code != 200:
-		raise Exception("Failed to get %s: github said '%s'" % (url, msg["message"]))
+		raise Exception(f"""Failed to get {url}: github said '{msg["message"]}'""")
 	return msg
 
 
 def fetch_prs():
-	return get("/repos/%s/pulls" % REPO)
+	return get(f"/repos/{REPO}/pulls")
 
 
 def prs_for(username, prs):
-	usertag = "@"+username
+	usertag = f"@{username}"
 	for pr in prs:
 		role = None
 		if pr["state"] == "open" and usertag in pr["body"]:

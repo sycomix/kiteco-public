@@ -119,9 +119,9 @@ def main():
 
     # Extract features
     queries = [] 
-    
+
     # Create query objects
-    n = int(len(train_indices) / 10)
+    n = len(train_indices) // 10
     for i, batch in enumerate(chunks(train_indices, n)):
         query = Query()
         labels = np.floor(4 * (1 - ranklearning.normalize_minmax(batch)))
@@ -129,8 +129,8 @@ def main():
             query.add(i, feats, labels[j])
         queries.append(query)
 
-    # Build the relations 
-    for _, query in enumerate(queries):
+    # Build the relations
+    for query in queries:
         query.build_relations()
 
     #

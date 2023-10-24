@@ -20,15 +20,12 @@ def get_supported_languages():
 
 
 def get_unique_suffix():
-    return '-{}-{}.json'.format(
-        get_date_time_in_ISO(),
-        uuid.uuid4().hex,
-    )
+    return f'-{get_date_time_in_ISO()}-{uuid.uuid4().hex}.json'
 
 
 def get_date_time_in_ISO():
     date_time = datetime.datetime.fromtimestamp(time.time())
-    return date_time.isoformat() + 'Z'
+    return f'{date_time.isoformat()}Z'
 
 
 def string_to_dict(string):

@@ -12,14 +12,14 @@ env = Environment(
 cache = {}
 
 def _schema_exists(filename):
-    return pkg_resources.resource_exists('kite_metrics', 'schemas/{}'.format(filename))
+    return pkg_resources.resource_exists('kite_metrics', f'schemas/{filename}')
 
 def _schema_open(filename):
-    return pkg_resources.resource_stream('kite_metrics', 'schemas/{}'.format(filename))
+    return pkg_resources.resource_stream('kite_metrics', f'schemas/{filename}')
 
 
 def load_context(key):
-    filename = '{}.ctx.yaml'.format(key)
+    filename = f'{key}.ctx.yaml'
     if filename not in cache:
         ctx = {}
         if _schema_exists(filename):
@@ -29,7 +29,7 @@ def load_context(key):
 
 
 def load_schema(key):
-    filename = '{}.yaml.tmpl'.format(key)
+    filename = f'{key}.yaml.tmpl'
     if filename not in cache:
         ctx = load_context(key)
         cache[filename] = yaml.load(env.get_template(filename).render(ctx), Loader=yaml.FullLoader)
@@ -38,12 +38,12 @@ def load_schema(key):
 
 
 def load_json_schema(key, extra_ctx=None):
-    filename = '{}.schema.json'.format(key)
+    filename = f'{key}.schema.json'
     if filename not in cache:
         if _schema_exists(filename):
             cache[filename] = json.load(_schema_open(filename))
         else:
-            tmpl_filename = '{}.schema.json.tmpl'.format(key)
+            tmpl_filename = f'{key}.schema.json.tmpl'
             ctx = {'schema': load_schema(key)}
             if extra_ctx:
                 ctx.update(extra_ctx)
@@ -51,6 +51,6 @@ def load_json_schema(key, extra_ctx=None):
             try:
                 cache[filename] = json.loads(rendered)
             except json.decoder.JSONDecodeError:
-                print("Error decoding schema JSON:\n{}".format(rendered))
+                print(f"Error decoding schema JSON:\n{rendered}")
 
     return cache[filename]

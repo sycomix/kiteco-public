@@ -53,7 +53,7 @@ def plot_user_hist(df: pd.DataFrame, users: pd.DataFrame, uid: str, max_editors:
         ymin, ymax = ax.get_ylim()
         ax.vlines(x=[start_date], ymin=ymin, ymax=ymax, color='r')
 
-    plt.title("history for user " + uid)
+    plt.title(f"history for user {uid}")
     plt.tight_layout()
     plt.legend(legend)
     plt.show()

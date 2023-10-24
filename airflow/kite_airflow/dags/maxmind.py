@@ -60,7 +60,11 @@ def maxmind_operator_fn(ds, **context):
             filename = os.path.splitext(os.path.basename(path))[0]
             s3.load_file_obj(mm_file, key_template.format(prefix='raw', dataset=dataset, ds=ds, filename=filename), bucket_name=bucket_name, replace=True)
 
-        ipv4_path = [p for p in mm_zipfile.namelist() if p.endswith('GeoLite2-{}-Blocks-IPv4.csv'.format(dataset.title()))][0]
+        ipv4_path = [
+            p
+            for p in mm_zipfile.namelist()
+            if p.endswith(f'GeoLite2-{dataset.title()}-Blocks-IPv4.csv')
+        ][0]
         ipv4_file = io.TextIOWrapper(mm_zipfile.open(ipv4_path, 'r'))
         ipv4_reader = csv.DictReader(ipv4_file)
         ipv4_output = io.StringIO()
@@ -70,7 +74,12 @@ def maxmind_operator_fn(ds, **context):
             rec['address'] = int(net.network_address)
             rec['mask'] = int(net.netmask)
             ipv4_writer.writerow(rec)
-        key = key_template.format(prefix='expanded', dataset=dataset, ds=ds, filename='GeoLite2-{}-Blocks-IPv4'.format(dataset))
+        key = key_template.format(
+            prefix='expanded',
+            dataset=dataset,
+            ds=ds,
+            filename=f'GeoLite2-{dataset}-Blocks-IPv4',
+        )
         s3.load_string(ipv4_output.getvalue(), key, bucket_name=bucket_name, replace=True)
 
 
@@ -82,10 +91,13 @@ maxmind_operator = PythonOperator(
 )
 
 for dataset in ['city']:
-    maxmind_operator >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='create_{}_names_table'.format(dataset),
-        query='''CREATE EXTERNAL TABLE kite_metrics.maxmind_{{params.dataset}}_names_{{ds_nodash}} (
+    (
+        (
+            maxmind_operator
+            >> AWSAthenaOperator(
+                aws_conn_id='aws_us_east_1',
+                task_id=f'create_{dataset}_names_table',
+                query='''CREATE EXTERNAL TABLE kite_metrics.maxmind_{{params.dataset}}_names_{{ds_nodash}} (
             geoname_id string,
             locale_code string,
             continent_code string,
@@ -104,18 +116,21 @@ for dataset in ['city']:
         LOCATION 's3://{{params.bucket}}/{{params.key_prefix_template.format(ds=ds, dataset=params.dataset, prefix='raw', filename=params.filename)}}'
         TBLPROPERTIES ('skip.header.line.count'='1')
         ''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={
-            'bucket': bucket_name,
-            'key_prefix_template': key_prefix_template,
-            'filename': 'GeoLite2-{}-Locations-en'.format(dataset.title()),
-            'dataset': dataset},
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='create_ipv4_{}_table'.format(dataset),
-        query='''CREATE EXTERNAL TABLE kite_metrics.maxmind_ipv4_{{params.dataset}}_{{ds_nodash}} (
+                output_location='s3://kite-metrics-test/athena-results/ddl',
+                database='kite_metrics',
+                dag=dag,
+                params={
+                    'bucket': bucket_name,
+                    'key_prefix_template': key_prefix_template,
+                    'filename': f'GeoLite2-{dataset.title()}-Locations-en',
+                    'dataset': dataset,
+                },
+            )
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'create_ipv4_{dataset}_table',
+            query='''CREATE EXTERNAL TABLE kite_metrics.maxmind_ipv4_{{params.dataset}}_{{ds_nodash}} (
             network string,
             geoname_id string,
             registered_country_geoname_id string,
@@ -132,36 +147,37 @@ for dataset in ['city']:
         LOCATION 's3://{{params.bucket}}/{{params.key_prefix_template.format(ds=ds, dataset=params.dataset, prefix='expanded', filename=filename)}}'
         TBLPROPERTIES ('skip.header.line.count'='1')
         ''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={
-            'bucket': bucket_name,
-            'key_prefix_template': key_prefix_template,
-            'filename': 'GeoLite2-{}-Blocks-IPv4'.format(dataset.title()),
-            'dataset': dataset
-        },
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='drop_ipv4_{}_table'.format(dataset),
-        query='''DROP TABLE kite_metrics.maxmind_{{params.dataset}}_ipv4''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={
-            'dataset': dataset
-        },
-    ) >> S3DeletePrefixOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='prepare_ipv4_{}_join_destination'.format(dataset),
-        bucket='kite-metrics',
-        keys='enrichment/maxmind/join/{{params.dataset}}/ipv4/',
-        params={'dataset': dataset},
-        dag=dag,
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='create_ipv4_{}_join_table'.format(dataset),
-        query='''CREATE TABLE kite_metrics.maxmind_{{params.dataset}}_ipv4
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={
+                'bucket': bucket_name,
+                'key_prefix_template': key_prefix_template,
+                'filename': f'GeoLite2-{dataset.title()}-Blocks-IPv4',
+                'dataset': dataset,
+            },
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'drop_ipv4_{dataset}_table',
+            query='''DROP TABLE kite_metrics.maxmind_{{params.dataset}}_ipv4''',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={'dataset': dataset},
+        )
+        >> S3DeletePrefixOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'prepare_ipv4_{dataset}_join_destination',
+            bucket='kite-metrics',
+            keys='enrichment/maxmind/join/{{params.dataset}}/ipv4/',
+            params={'dataset': dataset},
+            dag=dag,
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'create_ipv4_{dataset}_join_table',
+            query='''CREATE TABLE kite_metrics.maxmind_{{params.dataset}}_ipv4
         WITH (format='PARQUET',
               parquet_compression='SNAPPY',
               external_location = 's3://{{params.bucket}}/enrichment/maxmind/join/{{params.dataset}}/ipv4/')
@@ -177,28 +193,27 @@ for dataset in ['city']:
         JOIN kite_metrics.maxmind_city_names_{{ds_nodash}}
             ON kite_metrics.maxmind_ipv4_city_{{ds_nodash}}.geoname_id = kite_metrics.maxmind_city_names_{{ds_nodash}}.geoname_id
         ''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={'bucket': bucket_name, 'dataset': dataset},
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='cleanup_ipv4_{}_table'.format(dataset),
-        query='''DROP TABLE kite_metrics.maxmind_ipv4_{{params.dataset}}_{{ds_nodash}}''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={
-            'dataset': dataset
-        },
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='cleanup_{}_names_table'.format(dataset),
-        query='''DROP TABLE kite_metrics.maxmind_{{params.dataset}}_names_{{ds_nodash}}''',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=dag,
-        params={
-            'dataset': dataset
-        },
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={'bucket': bucket_name, 'dataset': dataset},
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'cleanup_ipv4_{dataset}_table',
+            query='''DROP TABLE kite_metrics.maxmind_ipv4_{{params.dataset}}_{{ds_nodash}}''',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={'dataset': dataset},
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'cleanup_{dataset}_names_table',
+            query='''DROP TABLE kite_metrics.maxmind_{{params.dataset}}_names_{{ds_nodash}}''',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={'dataset': dataset},
+        )
     )

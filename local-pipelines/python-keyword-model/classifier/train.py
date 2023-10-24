@@ -24,9 +24,7 @@ def get_base_stats(is_keyword_training=True, feature_encoder=None):
     git_hash = str(subprocess.check_output(['git', 'rev-parse', '--short','HEAD'], cwd=source_path))[2:-4]
     description = "5 epochs, categorical prefix style and previous keywords"
     training = "isKeyword" if is_keyword_training else "whichKeyword"
-    features = ""
-    if feature_encoder:
-        features = feature_encoder.get_features_str()
+    features = feature_encoder.get_features_str() if feature_encoder else ""
     pid = os.getpid()
     return dict(description=description, git_hash=git_hash, training=training, pid=pid, features=features)
 
@@ -43,7 +41,7 @@ def get_stats():
 def save_stats(s: list):
     with open(stats_filepath, "w") as o:
         json.dump(s, o)
-        print("Stats saved in {}".format(stats_filepath))
+        print(f"Stats saved in {stats_filepath}")
 
 
 def main():

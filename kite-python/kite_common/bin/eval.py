@@ -32,7 +32,7 @@ def main():
 
     output_dir = args.output_dir[:-1] if args.output_dir[-1] == '/' else args.output_dir
 
-    with open(output_dir + "/output", 'a') as f:
+    with open(f"{output_dir}/output", 'a') as f:
         f.write(output)
 
 if __name__ == "__main__":

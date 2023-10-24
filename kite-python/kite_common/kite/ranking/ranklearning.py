@@ -166,9 +166,7 @@ class HingeLoss(object):
         score[j]. s_i and s_j must have the relationship that data_i is
         more relevant to the query than s_j.
         """
-        if score_i < score_j + 1.:
-            return -1., 1.
-        return 0., 0.
+        return (-1., 1.) if score_i < score_j + 1. else (0., 0.)
 
 
 class ZeroOneLoss(object):
@@ -416,13 +414,12 @@ class BoostedTreeLearner(object):
     Trains a boosted decision tree score function using the lambdamart algorithm.
     """
     def __init__(self, queries, subsample=.5, use_sklearn_trees=False, **tree_options):
-        self.use_sklearn_trees = use_sklearn_trees 
+        self.use_sklearn_trees = use_sklearn_trees
         self.subsample = subsample
         self.tree_options = tree_options
         self.current = TreeEnsembleScorer([])
-        self.current_scores = list() 
-        for q in queries:
-            self.current_scores.append(np.zeros(len(q.features)))
+        self.current_scores = []
+        self.current_scores.extend(np.zeros(len(q.features)) for q in queries)
         self.previous_state = None
 
     def derivative_preprocess(self, i, features, labels, relations, ir, loss):
@@ -468,7 +465,7 @@ class BoostedTreeLearner(object):
     def step(self, queries, loss, ir, learning_rate=.1):
         self.previous_state = deepcopy(self)
 
-        score_gradients = [] 
+        score_gradients = []
         score_hessians = []
 
         for i, query in enumerate(queries):
@@ -493,12 +490,11 @@ class BoostedTreeLearner(object):
 
         if self.use_sklearn_trees:
             t = sklearn_tree.fit_least_squares(features, score_gradients, learning_rate, **self.tree_options)
-        else:
-            if len(score_hessians) != 0:
-                t = tree.fit_newton(features, score_gradients, learning_rate, score_hessians, **self.tree_options)
-            else:
-                t = tree.fit_least_squares(features, score_gradients, learning_rate, **self.tree_options)
+        elif len(score_hessians) == 0:
+            t = tree.fit_least_squares(features, score_gradients, learning_rate, **self.tree_options)
 
+        else:
+            t = tree.fit_newton(features, score_gradients, learning_rate, score_hessians, **self.tree_options)
         # Update the scores (cached for efficiency)
         for i, q in enumerate(queries):
             for j, row in enumerate(q.features):

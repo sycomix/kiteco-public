@@ -146,7 +146,7 @@ def main():
         size = hvd.size()
 
         # Add `_hvdN` suffix here so that all mirrors can output to, and be visible from tensorboard
-        tensorboard_path = args.tensorboard + "_hvd" + str(hvd.rank())
+        tensorboard_path = f"{args.tensorboard}_hvd{str(hvd.rank())}"
         # Pin process to a single GPU
         tf_config.gpu_options.visible_device_list = str(hvd.local_rank())
         trainer = HorovodAdamTrainer(model, base_config)
@@ -204,15 +204,30 @@ def main():
                 starting_step = 0
 
             if horovod_enabled:
-                ti = TrainInputs(session=sess, train_feeder=train_feeder, val_feeder=validate_feeder,
-                                summary_writer=sw, checkpoint_save_path=args.checkpoint_path,
-                                summary_interval=10, validation_interval=30,
-                                starting_step=starting_step, checkpoint_interval=int(500))
+                ti = TrainInputs(
+                    session=sess,
+                    train_feeder=train_feeder,
+                    val_feeder=validate_feeder,
+                    summary_writer=sw,
+                    checkpoint_save_path=args.checkpoint_path,
+                    summary_interval=10,
+                    validation_interval=30,
+                    starting_step=starting_step,
+                    checkpoint_interval=500,
+                )
             else:
-                ti = TrainInputs(session=sess, train_feeder=train_feeder, val_feeder=validate_feeder,
-                                summary_writer=sw, checkpoint_save_path=args.checkpoint_path,
-                                summary_interval=10, validation_interval=30, validation_based_checkpoint=True,
-                                starting_step=starting_step, checkpoint_interval=int(500))
+                ti = TrainInputs(
+                    session=sess,
+                    train_feeder=train_feeder,
+                    val_feeder=validate_feeder,
+                    summary_writer=sw,
+                    checkpoint_save_path=args.checkpoint_path,
+                    summary_interval=10,
+                    validation_interval=30,
+                    validation_based_checkpoint=True,
+                    starting_step=starting_step,
+                    checkpoint_interval=500,
+                )
 
             trainer.train(ti)
             end = datetime.datetime.now()

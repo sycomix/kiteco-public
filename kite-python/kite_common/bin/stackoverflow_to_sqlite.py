@@ -28,12 +28,7 @@ XmlFields = [
 
 
 def fast_iter(context, func, limit=None):
-    # Modified from following link:
-    # http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
-    # Author: Liza Daly
-    n = 0
-    for event, elem in context:
-        n += 1
+    for n, (event, elem) in enumerate(context, start=1):
         if n % 100000 == 0:
             print(n)
         func(elem)
@@ -97,10 +92,10 @@ def main():
     def flush():
         c = conn.cursor()
         print('Inserting %d posts and %d code blocks...' % (len(posts), len(code_blocks)))
-        if len(posts) > 0:
+        if posts:
             c.executemany('INSERT INTO posts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', posts)
             del posts[:]
-        if len(code_blocks) > 0:
+        if code_blocks:
             c.executemany('INSERT INTO code_blocks VALUES (?,?,?)', code_blocks)
             del code_blocks[:]
         conn.commit()

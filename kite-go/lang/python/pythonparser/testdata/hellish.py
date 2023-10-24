@@ -23,7 +23,7 @@ bar[:, ::2, ..., ::] += foo(*bar)
 
 class Foo:
 	class Bar(object, ham, spam):
-		def something(self, xxx, yyy=[foo for foo in range(5)]):
+		def something(self, xxx, yyy=list(range(5))):
 
 # someone left some lines empty here?
 

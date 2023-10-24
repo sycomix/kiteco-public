@@ -70,7 +70,7 @@ class Bot(object):
                 e = "<empty exception message>"
 
             print(e)
-            self.send("Error while executing `{}{}`:\n{}".format(f.__name__, params, e))
+            self.send(f"Error while executing `{f.__name__}{params}`:\n{e}")
 
     async def default_reply(self):
         """The default default reply function
@@ -81,7 +81,7 @@ class Bot(object):
 
     def msg_prefix(self):
         try:
-            return "[{} {}] ".format(self.func_name, self.sender)
+            return f"[{self.func_name} {self.sender}] "
         except AttributeError:
             return ""
 
@@ -90,9 +90,14 @@ class Bot(object):
         if not channel:
             channel = self.channel
 
-        r = self._sc.api_call("chat.postMessage", channel=channel, text="{}{}".format(self.msg_prefix(), text), link_names=True)
+        r = self._sc.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=f"{self.msg_prefix()}{text}",
+            link_names=True,
+        )
         if not r["ok"]:
-            raise Exception("Slack API returned error: {}".format(r["error"]))
+            raise Exception(f'Slack API returned error: {r["error"]}')
 
     def reply(self, text):
         """Reply to a slack message"""
@@ -102,14 +107,17 @@ class Bot(object):
         r = self._sc.api_call(
             "chat.postMessage",
             channel=self.channel,
-            text="{}{}".format(self.msg_prefix(), text),
-            link_names=True)
+            text=f"{self.msg_prefix()}{text}",
+            link_names=True,
+        )
         if not r["ok"]:
-            raise Exception("Slack API returned error: {}".format(r["error"]))
+            raise Exception(f'Slack API returned error: {r["error"]}')
 
     def upload(self, filename, filepath, title=""):
         """Upload a file to current channel"""
-        print("bot upload for filename: {}, filepath: {}, title: {}".format(filename, filepath, title))
+        print(
+            f"bot upload for filename: {filename}, filepath: {filepath}, title: {title}"
+        )
         if not title:
             title = filename
 
@@ -122,7 +130,7 @@ class Bot(object):
                 filename=filename,
                 title=title)
             if not r["ok"]:
-                raise Exception("Slack API returned error: {}".format(r["error"]))
+                raise Exception(f'Slack API returned error: {r["error"]}')
 
     def lookup_channel(self, channel_id):
         """Look up the channel ID and update channel_info"""
@@ -131,7 +139,7 @@ class Bot(object):
 
         r = self._sc.api_call("conversations.info", channel=channel_id)
         if not r["ok"]:
-            raise Exception("Slack API returned error: {}".format(r["error"]))
+            raise Exception(f'Slack API returned error: {r["error"]}')
         info = r["channel"]
 
         # if channel_id is for a DM channel, also trigger user lookup
@@ -149,7 +157,7 @@ class Bot(object):
 
         r = self._sc.api_call("users.info", user=user_id)
         if not r["ok"]:
-            raise Exception("Slack API returned error: {}".format(r["error"]))
+            raise Exception(f'Slack API returned error: {r["error"]}')
         info = r["user"]
         self.user_info[user_id] = info["name"]
 
@@ -167,7 +175,7 @@ class Bot(object):
 
         # if we are not waiting and the lock is locked, throw exception
         if not wait and lock.locked():
-            raise Exception('Could not acquire lock {}'.format(lockname))
+            raise Exception(f'Could not acquire lock {lockname}')
 
         # otherwise, return lock
         return lock
@@ -208,7 +216,7 @@ class ResponseQueue(object):
 
     async def run(self, count=10):
         """Start a number of work calls to execute tasks in the queue"""
-        self.workers = [asyncio.ensure_future(self.work()) for i in range(count)]
+        self.workers = [asyncio.ensure_future(self.work()) for _ in range(count)]
         await self.q.join()
 
     def cancel(self):

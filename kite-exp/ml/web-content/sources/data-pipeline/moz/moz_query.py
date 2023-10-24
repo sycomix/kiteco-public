@@ -20,7 +20,7 @@ def crawl_moz(url_list_path, csv_output_folder):
     for url in list_url:
         id = get_id_from_so_url(url)
         if test_file_exists(csv_output_folder + id + ".csv"):
-            print("The file {} already exists, skipping it".format(id+".csv"))
+            print(f"The file {id}.csv already exists, skipping it")
             continue
         start = time.time()
         get_csv_file(url, id, start, csv_output_folder)
@@ -28,7 +28,7 @@ def crawl_moz(url_list_path, csv_output_folder):
 
 def get_csv_file(url, question_id, start, csv_output_folder):
 
-    print("Processing {}".format(url))
+    print(f"Processing {url}")
     headers = {
         'origin': 'https://analytics.moz.com',
         'accept-encoding': 'gzip, deflate, br',
@@ -47,7 +47,7 @@ def get_csv_file(url, question_id, start, csv_output_folder):
     response.raise_for_status()
     with open(csv_output_folder + question_id + ".csv", "w") as outfile:
         outfile.write(response.text)
-        print("CSV saved to file {}".format(csv_output_folder + question_id + ".csv"))
+        print(f'CSV saved to file {csv_output_folder + question_id + ".csv"}')
     end = time.time()
     print("Time to process query {:.3f}s".format(end-start))
 

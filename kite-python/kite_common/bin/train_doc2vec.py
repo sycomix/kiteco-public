@@ -27,7 +27,9 @@ def main():
 		model.save(args.output)
 	except:
 		fallback_path = "/tmp/model.doc2vec"
-		print("Failed to save model to %s, attempting to save to %s instead" % (args.output, fallback_path))
+		print(
+			f"Failed to save model to {args.output}, attempting to save to {fallback_path} instead"
+		)
 		model.save(fallback_path)
 
 

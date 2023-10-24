@@ -17,9 +17,7 @@ def encode_number(feature) -> List[float]:
 
 def log_transform(feature_list) -> List[float]:
     log_feature = np.log(feature_list[0])
-    if log_feature == -np.inf:
-        return [0]
-    return [log_feature]
+    return [0] if log_feature == -np.inf else [log_feature]
 
 
 class Feed(NamedTuple):
@@ -51,9 +49,9 @@ class Feed(NamedTuple):
         vectorized_comp = []
         for attr in ['popularity_score', 'softmax_score', 'attr_score', 'model', 'completion_length', 'num_args']:
             val = getattr(comp_features, attr)
-            if type(val) == int or type(val) == float:
+            if type(val) in [int, float]:
                 v = encode_number(val)
-                if attr == 'popularity_score' or attr == 'softmax_score' or attr == 'attr_score':
+                if attr in ['popularity_score', 'softmax_score', 'attr_score']:
                     v = log_transform(v)
                 vectorized_comp += v
             else:

@@ -33,7 +33,7 @@ def download_report(report_id=None):
 
     # save content to zip file
     timestamp = date_from_report_id(report_id)
-    filename = REPORT_NAME.format(timestamp) + ".zip"
+    filename = f"{REPORT_NAME.format(timestamp)}.zip"
     with open(filename, "bw+") as f:
         f.write(content)
 
@@ -52,7 +52,7 @@ def zip_to_pdf(filename):
         f.extractall(dirname)
 
     # create pdf
-    pdf_filename = dirname + ".pdf"
+    pdf_filename = f"{dirname}.pdf"
     pdfkit.from_file(os.path.join(dirname, "index.html"), pdf_filename)
 
     return pdf_filename
@@ -105,20 +105,19 @@ def run():
     while 1:
         # if outside of posting time, continue
         dt = datetime.datetime.now()
-        if not (dt.weekday in (1, 2, 3) and dt.hour == 19):
+        if dt.weekday not in {1, 2, 3} or dt.hour != 19:
             continue
 
         f = download_report()
         try:
             report = zip_to_pdf(f)
-        # only do the rest if valid zip is downloaded
         except ValueError:
             print("Invalid zip")
         else:
             to_dropbox(report)
             to_slack(report)
             update_tr_info()
-            print("Uploaded {} to Dropbox".format(report))
+            print(f"Uploaded {report} to Dropbox")
 
         time.sleep(60*60)
 

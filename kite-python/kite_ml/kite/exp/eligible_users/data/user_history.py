@@ -196,6 +196,4 @@ def _python_events_in_weekdays(day: pd.Timestamp, summary: Dict[str, Any]) -> in
 def _max_key(d: Dict[str, int], default="", include_fn=None) -> str:
     if include_fn:
         d = {k: v for k, v in d.items() if include_fn(k)}
-    if not d:
-        return default
-    return sorted(d.items(), key=lambda i: -i[1])[0][0]
+    return default if not d else sorted(d.items(), key=lambda i: -i[1])[0][0]

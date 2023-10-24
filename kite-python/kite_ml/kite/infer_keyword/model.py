@@ -116,8 +116,7 @@ class Model(object):
                     if pred == kw:
                         if len(good_pred) < max_count and random.random() < sampling_rate:
                             good_pred.append({"data": json.dumps(rec.features.__dict__), "pred": pred.tolist()})
-                    else:
-                        if(len(bad_pred) < max_count) and random.random() < sampling_rate:
-                            bad_pred.append({"data": json.dumps(rec.features.__dict__), "pred": pred.tolist()})
+                    elif (len(bad_pred) < max_count) and random.random() < sampling_rate:
+                        bad_pred.append({"data": json.dumps(rec.features.__dict__), "pred": pred.tolist()})
             examples[kw] = {"good_pred": good_pred, "bad_pred": bad_pred}
         return examples

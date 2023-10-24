@@ -28,9 +28,9 @@ class ScoredCoOccurrence(NamedTuple):
 
 def load_scored_co_occurrences(path: str) -> List[ScoredCoOccurrence]:
     with open(path, 'r') as f:
-        scored: List[ScoredCoOccurrence] = []
-        for s in json.load(f):
-            scored.append(ScoredCoOccurrence.from_json(s))
+        scored: List[ScoredCoOccurrence] = [
+            ScoredCoOccurrence.from_json(s) for s in json.load(f)
+        ]
         return scored
 
 

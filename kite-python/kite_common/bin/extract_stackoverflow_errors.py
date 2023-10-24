@@ -16,17 +16,11 @@ GOLANG_PATTERN = re.compile(r'(([^:]*\.go)\:(\d+)([^\d][^ ]*)?\:\ )(.*)')
 
 def extract_error_golang(s):
 	r = GOLANG_PATTERN.match(s)
-	if r is None:
-		return None
-	else:
-		return s
+	return None if r is None else s
 
 
 def extract_error_python(s):
-	if 'Error:' in s:
-		return s
-	else:
-		return None
+	return s if 'Error:' in s else None
 
 
 def main():
@@ -55,7 +49,7 @@ def main():
 		extract_error = extract_error_golang
 		language_tag = "go"
 	else:
-		print("Uncorecognized language: %s" % args.language)
+		print(f"Uncorecognized language: {args.language}")
 		return
 
 	c.execute(sql, (language_tag,))
@@ -84,7 +78,7 @@ def main():
 	print("\nQuery was:\n%s\n" % sql)
 	print("Query returned %d rows containing %d lines, of which %d were errors" % 
 		(num_rows, num_lines, num_errors))
-	print("Wrote errors to %s" % args.output)
+	print(f"Wrote errors to {args.output}")
 
 
 if __name__ == '__main__':

@@ -37,8 +37,8 @@ class FileDataFeeder(DataFeeder):
         self._reset()
 
     def next(self) -> Feed:
-        contexts = list()
-        langs = list()
+        contexts = []
+        langs = []
         while len(contexts) < self._batch_size:
             line = self._file.readline()
             while len(line) == 0:
@@ -55,8 +55,7 @@ class FileDataFeeder(DataFeeder):
 
         self._count += 1
 
-        feed = Feed(context=contexts, langs=langs)
-        return feed
+        return Feed(context=contexts, langs=langs)
 
     def _reset(self):
         if self._file is not None:
@@ -64,7 +63,7 @@ class FileDataFeeder(DataFeeder):
             self._mark_done()
 
         self._filename = self._choose_next_file()
-        logging.info('starting to read {}'.format(self._filename))
+        logging.info(f'starting to read {self._filename}')
         path = os.path.join(self._in_dir, self._filename)
         self._file = gzip.open(path, 'r')
         self._count = 0
@@ -88,9 +87,9 @@ class FileDataFeeder(DataFeeder):
             candidates.sort()
             candidates = [f for idx, f in enumerate(candidates) if self._my_shard(idx)]
 
-            # shard before filtering via already_read!
-            candidates = [f for f in candidates if f not in self._already_read]
-            if candidates:
+            if candidates := [
+                f for f in candidates if f not in self._already_read
+            ]:
                 return candidates[0]
 
             # No new files available, sleep until a new file appears

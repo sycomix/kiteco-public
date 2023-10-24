@@ -165,15 +165,21 @@ class Model(BaseModel):
         ]
 
         infos.extend(
-            [info.with_name('name_{}'.format(info.name)) for info in self._train_infer_name.summary_infos()],
+            [
+                info.with_name(f'name_{info.name}')
+                for info in self._train_infer_name.summary_infos()
+            ]
         )
         infos.extend(
-            [info.with_name('production_{}'.format(info.name)) for info in self._train_infer_prod.summary_infos()],
+            [
+                info.with_name(f'production_{info.name}')
+                for info in self._train_infer_prod.summary_infos()
+            ]
         )
         self._infos = infos
 
         num_samples_all: tf.Tensor = self._train_placeholders.production_batch \
-            + self._train_placeholders.name_batch
+                + self._train_placeholders.name_batch
 
         summaries = {
             'num_production_samples': self._train_placeholders.production_batch,
@@ -189,10 +195,16 @@ class Model(BaseModel):
             'production_loss': self._train_infer_prod.loss(),
         }
         summaries.update(
-            {'name_{}'.format(k): v for k, v in self._train_infer_name.summaries_to_fetch().items()},
+            {
+                f'name_{k}': v
+                for k, v in self._train_infer_name.summaries_to_fetch().items()
+            }
         )
         summaries.update(
-            {'production_{}'.format(k): v for k, v in self._train_infer_prod.summaries_to_fetch().items()},
+            {
+                f'production_{k}': v
+                for k, v in self._train_infer_prod.summaries_to_fetch().items()
+            }
         )
         self._summaries = summaries
 

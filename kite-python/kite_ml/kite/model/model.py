@@ -149,10 +149,8 @@ class _Trainer(object):
                 if grad is not None:
                     if self._config.clip_gradients:
                         grad = tf.clip_by_norm(grad, self._config.max_gradient_norm)
-                    clipped.append((grad, var))
                     grads.append((grad, var))
-                else:
-                    clipped.append((grad, var))
+                clipped.append((grad, var))
             self._grads = grads
             self._train_op = optimizer.apply_gradients(clipped)
 
@@ -163,7 +161,7 @@ class _Trainer(object):
 
         scalars: Dict[str, tf.Tensor] = {}
         for grad, var in self._grads:
-            name = "norm_gradient_wrt_{}".format(var.name).replace(":", "_")
+            name = f"norm_gradient_wrt_{var.name}".replace(":", "_")
             scalars[name] = tf.norm(grad)
         self._grad_scalars = scalars
 
@@ -183,12 +181,13 @@ class _Trainer(object):
             fetches['train'] = self._train_op
 
         for metric, scalar in summaries_to_fetch.items():
-            fetches['summary/' + metric] = scalar
+            fetches[f'summary/{metric}'] = scalar
 
         result = sess.run(fetches, feeds)
 
-        summaries = {metric: result['summary/' + metric]
-                     for metric in summaries_to_fetch.keys()}
+        summaries = {
+            metric: result[f'summary/{metric}'] for metric in summaries_to_fetch
+        }
 
         summaries['loss'] = result['loss']
 
@@ -208,7 +207,7 @@ class _Trainer(object):
         with tf.name_scope('validate_summary'):
             val_aggregator = Aggregator(SummaryOp.build(summary_info))
 
-        logging.info("Running training for {} steps".format(self._config.steps))
+        logging.info(f"Running training for {self._config.steps} steps")
         max_validation_acc = 0
         moving_validation_acc = 0
         for step in range(ti.starting_step, ti.starting_step + self._config.steps):
@@ -216,30 +215,32 @@ class _Trainer(object):
             train_res = self._run(ti.session, step+1, ti.train_feeder.next(), train=True)
             duration = datetime.datetime.now() - start
 
-            logging.info("step {}: loss {}, took {}".format(step, train_res.loss, duration))
+            logging.info(f"step {step}: loss {train_res.loss}, took {duration}")
             train_aggregator.add(train_res.summaries)
 
             if step > 0 and step % ti.validation_interval == 0:
                 start = datetime.datetime.now()
                 validate_res = self._run(ti.session, step+1, ti.val_feeder.next(), train=False)
                 duration = datetime.datetime.now() - start
-                logging.info("validation {}, loss {}, took {}".format(step, validate_res.loss, duration))
+                logging.info(f"validation {step}, loss {validate_res.loss}, took {duration}")
 
                 if ti.validation_based_checkpoint:
                     if moving_validation_acc == 0:
                         moving_validation_acc = validate_res.summaries['accuracy']
                     else:
                         moving_validation_acc = ti.validation_smoothing_weight * moving_validation_acc + \
-                                             (1 - ti.validation_smoothing_weight) * validate_res.summaries['accuracy']
+                                                 (1 - ti.validation_smoothing_weight) * validate_res.summaries['accuracy']
                     if moving_validation_acc > max_validation_acc:
-                        logging.info('check pointing model at step {} with smoothed validation accuracy {}'.
-                                     format(step, moving_validation_acc))
+                        logging.info(
+                            f'check pointing model at step {step} with smoothed validation accuracy {moving_validation_acc}'
+                        )
                         saver.save(ti.session, ti.checkpoint_save_path, write_meta_graph=False, global_step=step)
-                        logging.info('model saved to {}'.format(ti.checkpoint_save_path))
+                        logging.info(f'model saved to {ti.checkpoint_save_path}')
                         max_validation_acc = moving_validation_acc
                     else:
-                        logging.info('skipping check pointing model at step {} with smoothed validation accuracy {}'.
-                                     format(step, moving_validation_acc))
+                        logging.info(
+                            f'skipping check pointing model at step {step} with smoothed validation accuracy {moving_validation_acc}'
+                        )
 
                 val_aggregator.add(validate_res.summaries)
 
@@ -248,13 +249,13 @@ class _Trainer(object):
                 start = datetime.datetime.now()
                 self.broadcast_global_variables(ti.session)
                 duration = datetime.datetime.now() - start
-                logging.info("broadcast global variables at step {}, took {}".format(step, duration))
+                logging.info(f"broadcast global variables at step {step}, took {duration}")
 
             if self.rank() == 0 and not ti.validation_based_checkpoint and \
-                    (step == 0 or (step + 1) % ti.checkpoint_interval == 0):
-                logging.info('check pointing the model at step {}'.format(step))
+                        (step == 0 or (step + 1) % ti.checkpoint_interval == 0):
+                logging.info(f'check pointing the model at step {step}')
                 saver.save(ti.session, ti.checkpoint_save_path, write_meta_graph=False, global_step=step)
-                logging.info('model saved to {}'.format(ti.checkpoint_save_path))
+                logging.info(f'model saved to {ti.checkpoint_save_path}')
 
             if step > 0 and step % ti.summary_interval == 0:
                 for agg in [train_aggregator, val_aggregator]:

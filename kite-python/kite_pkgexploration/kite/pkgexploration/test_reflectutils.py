@@ -68,7 +68,10 @@ class TypeutilsTest(unittest.TestCase):
         # self.assertEqual(reflectutils.approx_canonical_name(unittest.TestCase.assertEqual), "unittest.case.TestCase.assertEqual")
         with self.assertRaises(Exception):
             reflectutils.approx_canonical_name(1)
-        self.assertEqual(reflectutils.approx_canonical_name(queue.Queue().put), "{}.Queue.put".format(_QUEUEMOD))
+        self.assertEqual(
+            reflectutils.approx_canonical_name(queue.Queue().put),
+            f"{_QUEUEMOD}.Queue.put",
+        )
 
     def test_approx_canonical_name_django(self):
          # this ensures that django has a settings module and an app
@@ -78,15 +81,31 @@ class TypeutilsTest(unittest.TestCase):
             reflectutils.approx_canonical_name(QuerySet())
 
     def test_approx_canonical_name_builtins(self):
-        self.assertEqual(reflectutils.approx_canonical_name(str), "{}.str".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(str.join), "{}.str.join".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(type(str.join)), "{}.method_descriptor".format(_BUILTINMOD))
+        self.assertEqual(reflectutils.approx_canonical_name(str), f"{_BUILTINMOD}.str")
+        self.assertEqual(
+            reflectutils.approx_canonical_name(str.join), f"{_BUILTINMOD}.str.join"
+        )
+        self.assertEqual(
+            reflectutils.approx_canonical_name(type(str.join)),
+            f"{_BUILTINMOD}.method_descriptor",
+        )
         self.assertEqual(reflectutils.approx_canonical_name(os), "os")
-        self.assertEqual(reflectutils.approx_canonical_name(object), "{}.object".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(type), "{}.type".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(None), "{}.None".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(True), "{}.True".format(_BUILTINMOD))
-        self.assertEqual(reflectutils.approx_canonical_name(NotImplemented), "{}.NotImplemented".format(_BUILTINMOD))
+        self.assertEqual(
+            reflectutils.approx_canonical_name(object), f"{_BUILTINMOD}.object"
+        )
+        self.assertEqual(
+            reflectutils.approx_canonical_name(type), f"{_BUILTINMOD}.type"
+        )
+        self.assertEqual(
+            reflectutils.approx_canonical_name(None), f"{_BUILTINMOD}.None"
+        )
+        self.assertEqual(
+            reflectutils.approx_canonical_name(True), f"{_BUILTINMOD}.True"
+        )
+        self.assertEqual(
+            reflectutils.approx_canonical_name(NotImplemented),
+            f"{_BUILTINMOD}.NotImplemented",
+        )
         if not _PY3:
             self.assertEqual(reflectutils.approx_canonical_name(type(None)), "types.NoneType")
 

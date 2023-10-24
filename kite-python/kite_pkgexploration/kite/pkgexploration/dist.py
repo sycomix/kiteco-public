@@ -49,7 +49,7 @@ class DistMeta(object):
 
         # bfs with cycle-detection
         queue = [self]
-        while len(queue) > 0:
+        while queue:
             dep = queue.pop(0)
             if dep.name in deps:
                 continue
@@ -84,8 +84,11 @@ class DistMeta(object):
         @param req_str: the requirement string.
         """
         name = normalize_name(name)
-        for candidate, dist in pkg_resources.working_set.by_key.items():
-            if normalize_name(candidate) != name:
-                continue
-            return cls(dist)
-        return None
+        return next(
+            (
+                cls(dist)
+                for candidate, dist in pkg_resources.working_set.by_key.items()
+                if normalize_name(candidate) == name
+            ),
+            None,
+        )

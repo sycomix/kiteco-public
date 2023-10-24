@@ -22,10 +22,7 @@ def resolve_dotted_path(doc, path):
             return None, None
         container = container[container_name]
 
-    if field_name in container:
-        return container, field_name
-
-    return None, None
+    return (container, field_name) if field_name in container else (None, None)
 
 
 @json_pipe()
@@ -41,14 +38,14 @@ async def transform_elastic_index_metrics(it):
             continue
 
         event = doc.get('event')
-        if event == 'Index Build':
-            index_prefix = 'index_build'
-        elif event == 'Completion Stats':
+        if event == 'Completion Stats':
             index_prefix = 'completions_selected'
+        elif event == 'Index Build':
+            index_prefix = 'index_build'
         else:
             continue
 
-        index_name = '{}_{}'.format(index_prefix, index_date_suffix)
+        index_name = f'{index_prefix}_{index_date_suffix}'
 
         for field in ['originalTimestamp']:
             if field in doc:
@@ -72,10 +69,7 @@ async def transform_elastic_index_metrics(it):
                 data = gzip.GzipFile(fileobj=BytesIO(data)).read()
                 data = json.loads(data)
                 del doc['properties'][field]
-                # create one document per completion stat
-                i = 0
-                for stat in data:
-                    i += 1
+                for i, stat in enumerate(data, start=1):
                     elem = doc
                     for key in stat:
                         elem['properties'][key] = stat[key]

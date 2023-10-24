@@ -82,7 +82,7 @@ def copy_mp_raw_events(task_instance, execution_date, **context):
         utc_ts = pacific_ts.astimezone(pendulum.timezone('UTC'))
         line['time'] = int(time.mktime(utc_ts.timetuple()))
 
-        file_key = 'year={}/month={}/day={}/hour={}/event={}'.format(utc_ts.year, utc_ts.month, utc_ts.day, utc_ts.hour, line['name'])
+        file_key = f"year={utc_ts.year}/month={utc_ts.month}/day={utc_ts.day}/hour={utc_ts.hour}/event={line['name']}"
         if file_key not in files:
             b_io = io.BytesIO()
             files[file_key] = (b_io, gzip.GzipFile(fileobj=b_io, mode="w"))
@@ -93,7 +93,12 @@ def copy_mp_raw_events(task_instance, execution_date, **context):
     s3 = S3Hook('aws_us_east_1')
     for prefix, (b_io, gz_file) in files.items():
         gz_file.close()
-        s3.load_bytes(b_io.getvalue(), 'mixpanel/events/raw/{}/events.json.gz'.format(prefix), 'kite-metrics', replace=True)
+        s3.load_bytes(
+            b_io.getvalue(),
+            f'mixpanel/events/raw/{prefix}/events.json.gz',
+            'kite-metrics',
+            replace=True,
+        )
 
 
 PythonOperator(

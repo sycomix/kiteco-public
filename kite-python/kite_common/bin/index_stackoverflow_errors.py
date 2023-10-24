@@ -32,17 +32,11 @@ GOLANG_PATTERN = re.compile(r'(([^:]*\.go)\:(\d+)([^\d][^ ]*)?\:\ )(.*)')
 
 def extract_error_golang(s):
 	r = GOLANG_PATTERN.match(s)
-	if r is None:
-		return None
-	else:
-		return r.group(5)
+	return None if r is None else r.group(5)
 
 
 def extract_error_python(s):
-	if 'Error:' in s:
-		return s
-	else:
-		return None
+	return s if 'Error:' in s else None
 
 
 def main():
@@ -76,7 +70,7 @@ def main():
 		extract_error = extract_error_golang
 		language_tag = "go"
 	else:
-		print("Uncorecognized language: %s" % args.language)
+		print(f"Uncorecognized language: {args.language}")
 		return
 
 	c.execute(sql, (language_tag,))
@@ -107,12 +101,11 @@ def main():
 		rows_processed += len(batch)
 		print('%d rows processed' % rows_processed)
 
-	# Create the index structure
-	items = []
-	for error_id, post_ids in post_ids_by_pattern_index.items():
-		if len(post_ids) <= args.max:
-			items.append(dict(error_id=error_id, post_ids=post_ids))
-
+	items = [
+		dict(error_id=error_id, post_ids=post_ids)
+		for error_id, post_ids in post_ids_by_pattern_index.items()
+		if len(post_ids) <= args.max
+	]
 	results = {
 		"source_stackoverflow_database": args.stackoverflow_db,
 		"source_ontology": args.ontology,

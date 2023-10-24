@@ -16,14 +16,14 @@ def main():
     print('Loaded patterns for %d canonical errors' % len(x.patterns))
 
     # Apply to each line of text
-    for i, line in enumerate(open(args.input)):
+    for line in open(args.input):
         line = line.strip()
         info = x.canonicalize(line)
         if info is not None:
-            print('Matched: ' + line)
-            print('  Mapped to canonical error: %s' % info.pattern.format_string)
+            print(f'Matched: {line}')
+            print(f'  Mapped to canonical error: {info.pattern.format_string}')
             for value in info.wildcards:
-                print('    Wildcard: %s' % value)
+                print(f'    Wildcard: {value}')
 
 if __name__ == '__main__':
     main()

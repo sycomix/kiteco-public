@@ -58,18 +58,12 @@ def fullname(obj):
 	if inspect.ismodule(obj):
 		return getattr(obj, "__name__", "")
 
-	name = None
-	if isinstance(obj, types.UnboundMethodType):
-		name = qualname(obj)
-
+	name = qualname(obj) if isinstance(obj, types.UnboundMethodType) else None
 	if name is None:
 		name = getattr(obj, "__name__", None)
 
 	pkg = getattr(obj, "__module__", None)
-	if name is None or pkg is None:
-		return None
-	else:
-		return pkg + "." + name
+	return None if name is None or pkg is None else f"{pkg}.{name}"
 
 
 def getclass(obj):
@@ -115,10 +109,7 @@ def doc(x):
 	Get the documentation for x, or empty string if there is no documentation.
 	"""
 	s = inspect.getdoc(x)
-	if isinstance(s, basestring):
-		return s
-	else:
-		return ""
+	return s if isinstance(s, basestring) else ""
 
 
 def package(x):

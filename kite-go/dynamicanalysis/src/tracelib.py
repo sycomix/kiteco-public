@@ -95,18 +95,15 @@ class Node(object):
         elif isinstance(ast_node, list):
             list_values = map(lambda node: Node._get_ast_repr(node,
                                                               depth + 1, indent, include_field_names, output_format), ast_node)
-            return '%s[%s%s]' % (
-                indent_text, ', '.join(list_values), indent_text)
+            return f"{indent_text}[{', '.join(list_values)}{indent_text}]"
 
         if output_format == "json":
-            return "%s%s" % (indent_text, Node._get_json_ast_repr_for_primitive(ast_node))
-        return "%s%s" % (indent_text, Node._get_plain_ast_repr_for_primitive(ast_node))
+            return f"{indent_text}{Node._get_json_ast_repr_for_primitive(ast_node)}"
+        return f"{indent_text}{Node._get_plain_ast_repr_for_primitive(ast_node)}"
 
     @staticmethod
     def _get_plain_ast_repr_for_primitive(ast_node):
-        if isinstance(ast_node, basestring):
-            return "'%s'" % (ast_node)
-        return "%s" % (ast_node)
+        return f"'{ast_node}'" if isinstance(ast_node, basestring) else f"{ast_node}"
 
     @staticmethod
     def _get_json_ast_repr_for_primitive(ast_node):
@@ -115,7 +112,7 @@ class Node(object):
         if isinstance(ast_node, bool):
             return "\"%s\"" % (ast_node)
         elif isinstance(ast_node, int):
-            return "%s" % (ast_node)
+            return f"{ast_node}"
         elif isinstance(ast_node, str):
             return json.dumps(ast_node)
         elif ast_node is None:
@@ -148,7 +145,12 @@ class Node(object):
             kw_fields_as_strings = []
             for (k, v) in node_kw_args.iteritems():
                 val = str(v).strip()
-                if k == "k_type" or k == "k_function_fqn" or k == "k_module_fqn" or k == "k_instance_class_fqn":
+                if k in [
+                    "k_type",
+                    "k_function_fqn",
+                    "k_module_fqn",
+                    "k_instance_class_fqn",
+                ]:
                     val = "\"%s\"" % val
                 kw_fields_as_strings.append(
                     '%s\"%s\":%s' %
@@ -159,12 +161,9 @@ class Node(object):
                                                field_values + kw_fields_as_strings))
         elif output_format == "plain":
             kw_fields_as_strings = [
-                '%s%s=%s' %
-                (indent_text_args,
-                 str(k).strip(),
-                    str(v).strip()) for (
-                    k,
-                    v) in node_kw_args.iteritems()]
+                f'{indent_text_args}{str(k).strip()}={str(v).strip()}'
+                for (k, v) in node_kw_args.iteritems()
+            ]
             encoded = '%s%s(%s)' % (indent_text_node,
                                     ast_node.__class__.__name__,
                                     ', '.join(
@@ -200,7 +199,7 @@ class WrappedNodeTracker(Node):
             module = cl.__module__
             if module is None or module == str.__class__.__module__:
                 return cl.__name__
-            return cl.__module__ + '.' + cl.__name__
+            return f'{cl.__module__}.{cl.__name__}'
         return cl.__name__
 
     def wrap(self, result):
@@ -209,14 +208,14 @@ class WrappedNodeTracker(Node):
         if isinstance(result, types_supported):
             if (hasattr(result, '__module__') and result.__module__ is not None and
                     hasattr(result, '__name__') and result.__name__ is not None):
-                self.annotate('k_function_fqn', result.__module__ + '.' + result.__name__)
+                self.annotate('k_function_fqn', f'{result.__module__}.{result.__name__}')
         if isinstance(result, types.ModuleType):
             if hasattr(result, '__name__') and result.__name__ is not None:
                 self.annotate('k_module_fqn', result.__name__)
         if isinstance(result, types.TypeType):
             if (hasattr(result, '__module__') and result.__module__ is not None and
                     hasattr(result, '__name__') and result.__name__ is not None):
-                self.annotate('k_instance_class_fqn', result.__module__ + '.' + result.__name__)
+                self.annotate('k_instance_class_fqn', f'{result.__module__}.{result.__name__}')
 
         # skip the annotate() call because this value is supposed to change
         # over time
@@ -244,7 +243,7 @@ class WrappedNodeTracker(Node):
         y = []
         ix_next_child = 0
         for ast_node in field_ast_nodes:
-            if isinstance(ast_node, ast.AST) or isinstance(ast_node, list):
+            if isinstance(ast_node, (ast.AST, list)):
                 # expect to have an entry in self.children for this ast_node
                 y.append(
                     self.children[ix_next_child].get_ast_repr(
@@ -398,8 +397,12 @@ def trace_walk_func(tree, exact_src):
                     #        aware of them.
                     #   3) fields which are are recursing on
 
-                    all_fields_is_ast_or_list = [isinstance(value, ast.AST) or isinstance(value, list)
-                                                 for field, value in ast.iter_fields(node_tracker.original_ast_node)]
+                    all_fields_is_ast_or_list = [
+                        isinstance(value, (ast.AST, list))
+                        for field, value in ast.iter_fields(
+                            node_tracker.original_ast_node
+                        )
+                    ]
                     if len(all_fields_is_ast_or_list) != len(tree._fields):
                         raise ValueError()
 
@@ -439,7 +442,8 @@ def trace_walk_func(tree, exact_src):
 
             if not isinstance(tree, expr):
                 raise ValueError(
-                    'cannot be wrapped -> should be in types_to_not_wrap: ' + str(type(tree)))
+                    f'cannot be wrapped -> should be in types_to_not_wrap: {str(type(tree))}'
+                )
 
             trace_walk.walk_children(tree)
             wrapped = hq[
@@ -470,11 +474,9 @@ def get_all_traced_ast_reprs(
 
 @macros.expr
 def kite_trace(tree, exact_src, **kw):
-    ret = trace_walk_func(tree, exact_src)
-    return ret
+    return trace_walk_func(tree, exact_src)
 
 
 @macros.block
 def kite_trace(tree, exact_src, **kw):
-    ret = trace_walk_func(tree, exact_src)
-    return ret
+    return trace_walk_func(tree, exact_src)

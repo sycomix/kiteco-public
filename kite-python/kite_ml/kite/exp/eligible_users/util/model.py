@@ -50,7 +50,7 @@ def features_and_labels(dataset_df: pd.DataFrame) -> (np.ndarray, np.ndarray):
 
 def train_logistic_model(dataset: pd.DataFrame) -> (LogisticRegression, preprocessing.StandardScaler):
     train, test = train_test_split(dataset)
-    logging.info("{} train samples, {} test samples".format(len(train), len(test)))
+    logging.info(f"{len(train)} train samples, {len(test)} test samples")
 
     X_train, y_train = features_and_labels(train)
     scaler = preprocessing.StandardScaler().fit(X_train)
@@ -58,7 +58,7 @@ def train_logistic_model(dataset: pd.DataFrame) -> (LogisticRegression, preproce
 
     X_test, y_test = features_and_labels(test)
     y_pred = clf.predict(scaler.transform(X_test))
-    logging.info("logistic model accuracy: {}".format(accuracy_score(y_test, y_pred)))
+    logging.info(f"logistic model accuracy: {accuracy_score(y_test, y_pred)}")
 
     return clf, scaler
 
@@ -66,9 +66,7 @@ def train_logistic_model(dataset: pd.DataFrame) -> (LogisticRegression, preproce
 def logistic_weights(clf: LogisticRegression, dataset: pd.DataFrame) -> pd.Series:
     col_names = _feature_col_names(dataset)
 
-    feature_vals = {}
-    for name, val in zip(col_names, clf.coef_[0]):
-        feature_vals[name] = val
+    feature_vals = dict(zip(col_names, clf.coef_[0]))
     feature_vals["intercept"] = clf.intercept_[0]
     return pd.Series(feature_vals).sort_values(ascending=False)
 

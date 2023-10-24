@@ -46,38 +46,62 @@ def dashboards(conf, **context):
     for dashboard in dashboards:
         res = requests.post(dashboard['url'], **kibana_requests_kwargs)
         if res.status_code != 200:
-            raise Exception("Error requesting dashboard, config={}, code={}, response={}".format(json.dumps(dashboard), res.status_code, res.text))
-        logger.info("ENQUEUE RES={}".format(res.json()))
+            raise Exception(
+                f"Error requesting dashboard, config={json.dumps(dashboard)}, code={res.status_code}, response={res.text}"
+            )
+        logger.info(f"ENQUEUE RES={res.json()}")
         enqueued.append(res.json())
 
     errors = []
     for dashboard, rendered_url in zip(dashboards, enqueued):
-        logger.info('Waiting for dashboard "{}"'.format(dashboard['slackParams']['title']))
+        logger.info(
+            f"""Waiting for dashboard "{dashboard['slackParams']['title']}\""""
+        )
         while True:
-            res = requests.get("{}{}".format(KIBANA_URL, rendered_url['path']), **kibana_requests_kwargs)
+            res = requests.get(
+                f"{KIBANA_URL}{rendered_url['path']}", **kibana_requests_kwargs
+            )
             if res.status_code == 503:
                 logger.info('Received 503 response, sleeping.')
                 time.sleep(60)
                 continue
             elif res.status_code != 200:
-                errors.append('Error fetching rendered dashboard, config={}, code={}, response={}'.format(json.dumps(dashboard), res.status_code, res.text))
+                errors.append(
+                    f'Error fetching rendered dashboard, config={json.dumps(dashboard)}, code={res.status_code}, response={res.text}'
+                )
                 break
 
-            logger.info('Kibana response: code={}, response={}'.format(res.status_code, res.content))
+            logger.info(f'Kibana response: code={res.status_code}, response={res.content}')
             filename = dashboard['slackParams']['filename']
-            logger.info('Slack request: files={}, headers={}, url={}'.format({
-                    'file': (filename, res.content),
-                    **{k: (None, v) for k, v in dashboard['slackParams'].items()},
-                }, {'Authorization': 'Bearer {}'.format(Variable.get('slack_token'))}, SLACK_URL))
+            logger.info(
+                'Slack request: files={}, headers={}, url={}'.format(
+                    {
+                        'file': (filename, res.content),
+                        **{
+                            k: (None, v)
+                            for k, v in dashboard['slackParams'].items()
+                        },
+                    },
+                    {'Authorization': f"Bearer {Variable.get('slack_token')}"},
+                    SLACK_URL,
+                )
+            )
             slack_res = requests.post(
                 SLACK_URL,
                 files={
                     'file': (filename, res.content),
-                    **{k: (None, v) for k, v in dashboard['slackParams'].items()},
+                    **{
+                        k: (None, v)
+                        for k, v in dashboard['slackParams'].items()
+                    },
                 },
-                headers={'Authorization': 'Bearer {}'.format(Variable.get('slack_token'))}
+                headers={
+                    'Authorization': f"Bearer {Variable.get('slack_token')}"
+                },
             )
-            logger.info('Slack response: code={}, response={}'.format(slack_res.status_code, slack_res.text))
+            logger.info(
+                f'Slack response: code={slack_res.status_code}, response={slack_res.text}'
+            )
             break
 
     if errors:

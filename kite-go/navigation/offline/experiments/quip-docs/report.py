@@ -76,16 +76,14 @@ class Example:
 
     def format_relevant(self, titles: Dict[str, str]) -> str:
         retrieved_set = set(self.retrieved)
-        missing = [
-            format_quip(r, titles)
-            for r in self.relevant
-            if r not in retrieved_set
-        ]
-        if not missing:
+        if missing := [
+            format_quip(r, titles) for r in self.relevant if r not in retrieved_set
+        ]:
+            return "\n".join(
+                ["### Relevant but not retrieved:"] + [f"- {r}" for r in missing]
+            )
+        else:
             return ""
-        return "\n".join(
-            ["### Relevant but not retrieved:"] + [f"- {r}" for r in missing]
-        )
 
 
 class DocSet:
@@ -104,14 +102,10 @@ class DocSet:
         }
         self.relevant = {}
         for code, docs in relevant.items():
-            valids = {
-                doc: pulls
-                for doc, pulls in docs.items()
-                if doc in valid_docs
-            }
-            if not valids:
-                continue
-            self.relevant[code] = valids
+            if valids := {
+                doc: pulls for doc, pulls in docs.items() if doc in valid_docs
+            }:
+                self.relevant[code] = valids
         self.titles = titles
 
     def format_documents(self) -> str:

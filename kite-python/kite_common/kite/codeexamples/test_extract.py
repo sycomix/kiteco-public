@@ -271,46 +271,54 @@ def test2():
     def _check_snippets(self, code, expected):
         snippets = extract.get_snippets("", code)
         self.assertEqual(
-            len(expected), len(snippets),
-            "expected %s got %s" % (expected, [x.to_json() for x in snippets]))
+            len(expected),
+            len(snippets),
+            f"expected {expected} got {[x.to_json() for x in snippets]}",
+        )
 
         for idx, snippet in enumerate(snippets):
             incantations = expected[idx].get('incantations', [])
             decorators = expected[idx].get('decorators', [])
 
             self.assertEqual(
-                len(snippet.incantations), len(incantations),
-                "expected %s incantations got %s" % (incantations, [x.to_json() for x in snippet.incantations]))
+                len(snippet.incantations),
+                len(incantations),
+                f"expected {incantations} incantations got {[x.to_json() for x in snippet.incantations]}",
+            )
             self.assertEqual(
-                len(snippet.decorators), len(decorators),
-                "expected %s decorators got %s" % (decorators, [x.to_json() for x in snippet.decorators]))
+                len(snippet.decorators),
+                len(decorators),
+                f"expected {decorators} decorators got {[x.to_json() for x in snippet.decorators]}",
+            )
 
             self._check_incantations(incantations, snippet.incantations)
             self._check_incantations(decorators, snippet.decorators)
 
     def _check_incantations(self, expected, incantations):
-            snippet_map = {}
-            for inc in incantations:
-                snippet_map[inc.example_of] = inc
+        snippet_map = {inc.example_of: inc for inc in incantations}
+        for name, args, kwargs in expected:
+            self.assertIn(name, snippet_map, f"expected {name} to be in {snippet_map}")
 
-            for name, args, kwargs in expected:
-                self.assertIn(name, snippet_map,
-                              "expected %s to be in %s" % (name, snippet_map))
+            inc = snippet_map[name]
+            self.assertEqual(len(args), inc.num_args,
+                             "expected %d args, got %d" % (len(args), inc.num_args))
 
-                inc = snippet_map[name]
-                self.assertEqual(len(args), inc.num_args,
-                                 "expected %d args, got %d" % (len(args), inc.num_args))
+            for idx in range(len(args)):
+                self.assertEqual(
+                    args[idx],
+                    inc.args[idx]['Type'],
+                    f"expected {args[idx]}, got {inc.args[idx]['Type']}",
+                )
 
-                for idx in range(len(args)):
-                    self.assertEqual(args[idx], inc.args[idx]['Type'],
-                                     "expected %s, got %s" % (args[idx], inc.args[idx]['Type']))
+            self.assertEqual(len(kwargs), inc.num_keyword_args,
+                             "expected %d args, got %d" % (len(kwargs), inc.num_keyword_args))
 
-                self.assertEqual(len(kwargs), inc.num_keyword_args,
-                                 "expected %d args, got %d" % (len(kwargs), inc.num_keyword_args))
-
-                for kwarg in inc.kwargs:
-                    self.assertIn(kwarg['Key'], kwargs,
-                                  "unexpected kwarg %s, expected one of %s" % (kwarg['Key'], kwargs))
+            for kwarg in inc.kwargs:
+                self.assertIn(
+                    kwarg['Key'],
+                    kwargs,
+                    f"unexpected kwarg {kwarg['Key']}, expected one of {kwargs}",
+                )
 
 
 if __name__ == "__main__":

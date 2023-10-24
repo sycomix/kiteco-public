@@ -14,8 +14,8 @@ MAX_ITER = 1000 * 1000 * 10
 SAVE_INTERVAL = 20000  #
 
 MODEL_NAME = 'refactor_pr'
-TENSORBOARD_PATH = '/data/kite/tensorboard/' + MODEL_NAME
-MODEL_SAVE_PATH = '/data/kite/models/' + MODEL_NAME
+TENSORBOARD_PATH = f'/data/kite/tensorboard/{MODEL_NAME}'
+MODEL_SAVE_PATH = f'/data/kite/models/{MODEL_NAME}'
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
 
     validation_feeder = train_feeder  # temporary hack until we get a "validation" endpoint.
 
-    logging.info('model name {}'.format(MODEL_NAME))
+    logging.info(f'model name {MODEL_NAME}')
 
     config = Config(label_taxonomy, max_reduce_model=False)
     model = GGNN(config)

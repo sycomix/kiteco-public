@@ -47,14 +47,10 @@ class CommandRunner(object):
 
     def build_paths(self):
         # this command sets all the subpaths dependant on the main repo paths
-        if self.is_release_operation:
-            cmd_prefix = "release"
-        else:
-            cmd_prefix = self.bot.sender
-
+        cmd_prefix = "release" if self.is_release_operation else self.bot.sender
         self.SENDER= cmd_prefix
 
-        base_path = os.path.join(self.BASE_PATH, "{}/".format(cmd_prefix))
+        base_path = os.path.join(self.BASE_PATH, f"{cmd_prefix}/")
         repo_path = os.path.join(base_path, "src", "github.com", "kiteco", "kiteco")
 
         #  the release path is the place to put successfully finished plugin builds so the release commands always have
@@ -122,7 +118,7 @@ class CommandRunner(object):
         tasks = []
 
         ref = kwargs['ref']
-        self.bot.send("Grabbing latest {}".format(ref))
+        self.bot.send(f"Grabbing latest {ref}")
         await self.git_reset_latest(ref)
 
         # macos client
@@ -130,17 +126,17 @@ class CommandRunner(object):
             print("Will stage macos client")
             tasks.append(self.stage_macos_client())
 
-        if len(tasks) > 0:
+        if tasks:
             print("Waiting for macos")
             await self.gather_and_await(tasks)
             tasks = []
 
-        if len(tasks) > 0:
+        if tasks:
             print("Waiting for windows")
             await self.gather_and_await(tasks)
             tasks = []
 
-        if len(tasks) > 0:
+        if tasks:
             print("Waiting for linux")
             await self.gather_and_await(tasks)
             tasks = []
@@ -154,12 +150,6 @@ class CommandRunner(object):
         if kwargs["binaries"]:
             print("Will upload plugin binaries")
             tasks.append(self.upload_plugin_binaries())
-
-        # release channel ID
-        release_ch_id = "C0M76GA13"
-        # message changelog to release
-        # if not kwargs["quiet"]:
-            # tasks.append(self.git_release_diff(channel=release_ch_id))
 
         # gather and wait
         print("Awaiting build tasks")
@@ -180,6 +170,8 @@ class CommandRunner(object):
         print("Release is ready")
         if not kwargs["quiet"]:
             self.bot.send("Release is ready! @here")
+            # release channel ID
+            release_ch_id = "C0M76GA13"
             self.bot.send(
                 "New release is on staging, please test your changes @here",
                 channel=release_ch_id)
@@ -212,7 +204,7 @@ class CommandRunner(object):
 
         tasks = []
         for name, directory in list(self.PLUGIN_DIRS.items()):
-            print("build_binaries PLUGIN_DIRS directory: `{}`".format(directory))
+            print(f"build_binaries PLUGIN_DIRS directory: `{directory}`")
             kwargs = {
                 "cwd": directory,
                 "error_mesg": error.format(name),
@@ -235,9 +227,11 @@ class CommandRunner(object):
             if name in self.PLUGIN_BIN_PATHS:
                 relative_binary_path = self.PLUGIN_BIN_PATHS[name]
                 local_repo_binary_path = glob.glob(os.path.join(self.GIT_REPO, "plugins", relative_binary_path))
-                if len(local_repo_binary_path) == 0:
+                if not local_repo_binary_path:
                     # no files matched
-                    self.bot.send("No files matched glob pattern {}".format(os.path.join(self.GIT_REPO, "plugins", relative_binary_path)))
+                    self.bot.send(
+                        f'No files matched glob pattern {os.path.join(self.GIT_REPO, "plugins", relative_binary_path)}'
+                    )
                     continue
                 local_repo_binary_path = local_repo_binary_path[0]
                 release_repo_binary_path = os.path.join(self.RELEASE_PLUGINS_DIR, relative_binary_path)
@@ -252,8 +246,9 @@ class CommandRunner(object):
                     move_cmd = ["cp", local_repo_binary_path, release_repo_binary_path]
                     await self.run_subprocess(
                         move_cmd,
-                        success_mesg="Copied {} plugin to release repo to prep for later release".format(name),
-                        error_mesg="Failed to copy {} plugin".format(name))
+                        success_mesg=f"Copied {name} plugin to release repo to prep for later release",
+                        error_mesg=f"Failed to copy {name} plugin",
+                    )
 
         # add updated plugin submodules
         await self.git_add_plugins()
@@ -263,15 +258,10 @@ class CommandRunner(object):
 
     async def build_test(self, **kwargs):
         """Build a test build"""
-        human_plugin_name = {
-            "Sublime Text 3": "sublime",
-            "Vim/Neovim": "vim",
-        }
-
         self.bot.send("Starting test build...")
         print("Starting test build")
-        print("GIT_REPO: `{}`".format(self.GIT_REPO))
-        print("SCRIPTS: `{}`".format(self.SCRIPTS))
+        print(f"GIT_REPO: `{self.GIT_REPO}`")
+        print(f"SCRIPTS: `{self.SCRIPTS}`")
         # task list
         tasks = []
 
@@ -285,7 +275,7 @@ class CommandRunner(object):
 
             # pull submodules
             for submodule in r.submodules:
-                print("pulling submodule plugin with path `{}`".format(submodule.path))
+                print(f"pulling submodule plugin with path `{submodule.path}`")
                 if submodule.path.startswith("plugins/"):
                     # get the git command interface for the submodule
                     subgit = submodule.module().git
@@ -293,34 +283,37 @@ class CommandRunner(object):
                     subgit.checkout("master")
                     subgit.pull()
             test_branch = "master"
-        # use current repo state
         elif kwargs["branch"] == "current":
-            self.bot.send("Grabbing latest for branch `{}`".format(test_branch))
-            print("Grabbing latest for branch `{}`".format(test_branch))
+            self.bot.send(f"Grabbing latest for branch `{test_branch}`")
+            print(f"Grabbing latest for branch `{test_branch}`")
             test_branch = str(await self.git_current_branch())
-        # use branch
         else:
             test_branch = kwargs["branch"]
-            print("resetting for latest to branch `{}`".format(test_branch))
+            print(f"resetting for latest to branch `{test_branch}`")
             await self.git_reset_latest(test_branch)
 
         # verify datadeps early and fail if they're no good
         await self.verify_datadeps()
 
-        self.bot.send("Building on branch `{}`".format(test_branch))
+        self.bot.send(f"Building on branch `{test_branch}`")
 
         if kwargs["binaries"]:
             # build binaries
             self.bot.send("Starting binaries build...")
-            print("GIT_REPO: `{}`".format(self.GIT_REPO))
-            print("SCRIPTS: `{}`".format(self.SCRIPTS))
+            print(f"GIT_REPO: `{self.GIT_REPO}`")
+            print(f"SCRIPTS: `{self.SCRIPTS}`")
             # run go generate on each of the plugins
             build_cmd = ["go", "generate"]
             success = "{} plugin built successfully."
             error = "Error while building {}"
+            human_plugin_name = {
+                "Sublime Text 3": "sublime",
+                "Vim/Neovim": "vim",
+            }
+
             for name, directory in list(self.PLUGIN_DIRS.items()):
                 # filter if only_plugins specified
-                print("plugin name, directory: `{}`, `{}`".format(name, directory))
+                print(f"plugin name, directory: `{name}`, `{directory}`")
                 if kwargs["only_plugins"] and len(kwargs["only_plugins"]) > 0:
                     if human_plugin_name[name] in kwargs["only_plugins"]:
                         tasks.append(
@@ -351,9 +344,9 @@ class CommandRunner(object):
     async def stage_macos_client(self, test=False):
         """Build and stage the MacOS client"""
         self.bot.send("Starting MacOS build...")
-        print("GIT_REPO: `{}`".format(self.GIT_REPO))
-        print("SCRIPTS: `{}`".format(self.SCRIPTS))
-        print("MACOS_DMG_DIR: `{}`".format(self.MACOS_DMG_DIR))
+        print(f"GIT_REPO: `{self.GIT_REPO}`")
+        print(f"SCRIPTS: `{self.SCRIPTS}`")
+        print(f"MACOS_DMG_DIR: `{self.MACOS_DMG_DIR}`")
 
         # on the first build for this xcode project it will silently hang
         #  on the solness box unless the project is opened once in xcode first
@@ -375,33 +368,35 @@ class CommandRunner(object):
         # upload to slack if test
         # NOTE: should try to get this from script output in the future
         if test:
-            dmg_output = os.path.join(self.MACOS_DMG_DIR, "Kite-{}.dmg".format(test_version))
-            print("dmg output: `{}`".format(dmg_output))
+            dmg_output = os.path.join(self.MACOS_DMG_DIR, f"Kite-{test_version}.dmg")
+            print(f"dmg output: `{dmg_output}`")
             self.try_uploading(dmg_output)
 
     async def stage_backend(self, branch_name):
         """Build and stage the backend"""
         await self.require_deployment_tool(rebuild=True)
 
-        self.bot.send("Deploying %s..." % branch_name)
+        self.bot.send(f"Deploying {branch_name}...")
         print("Deploying ", branch_name)
         await self.run_subprocess(
-            ["./"+DEPLOYMENTS_CMD, "deployregions", branch_name],
+            [f"./{DEPLOYMENTS_CMD}", "deployregions", branch_name],
             logfile_name="deploy-server",
             error_mesg="Deployment error!",
-            success_mesg=("Deployed release %s" % branch_name))
+            success_mesg=f"Deployed release {branch_name}",
+        )
 
         # check on the deployment every 5 minutes
         while not await self.check_deployment(branch_name):
             await asyncio.sleep(300)
 
-        self.bot.send("Staging %s..." % branch_name)
+        self.bot.send(f"Staging {branch_name}...")
         print("Staging ", branch_name)
         await self.run_subprocess(
-            ["./"+DEPLOYMENTS_CMD, "switchregions", branch_name, "staging"],
+            [f"./{DEPLOYMENTS_CMD}", "switchregions", branch_name, "staging"],
             logfile_name="albswitch",
             error_mesg="Load-balancing error!",
-            success_mesg="%s now available on staging.kite.com" % branch_name)
+            success_mesg=f"{branch_name} now available on staging.kite.com",
+        )
 
     async def stage_website(self):
         """Build and stage the website
@@ -463,11 +458,11 @@ class CommandRunner(object):
 
     async def do_sleep_test(self):
         r = await self.get_repo()
-        self.bot.send("repo path: {}  commit: {}".format(r.working_dir, r.commit().hexsha))
+        self.bot.send(f"repo path: {r.working_dir}  commit: {r.commit().hexsha}")
         self.bot.send("sleeping for 60s to test")
         await asyncio.sleep(60)
         self.bot.send("sleep finished")
-        self.bot.send("repo path: {}  commit: {}".format(r.working_dir, r.commit().hexsha))
+        self.bot.send(f"repo path: {r.working_dir}  commit: {r.commit().hexsha}")
         return True
 
     async def release(self, **kwargs):
@@ -496,13 +491,10 @@ class CommandRunner(object):
             # make release a NOOP in safe mode, just sleep for 60s and display some debugging stats instead
             self.bot.send("performing SAFE MODE release, expect many verbose NOOPs")
 
-        # TODO: if kwargs["backend"] is given, it should check the release via deployments tool;
-        # for now, just make sure the branch starts with "release_"
-        backend = kwargs.get("backend")
-        if backend:
+        if backend := kwargs.get("backend"):
             if not backend.startswith("release_"):
                 print("INVALID: backend release name illegal: ", backend)
-                self.bot.reply("invalid backend release `{}`".format(backend))
+                self.bot.reply(f"invalid backend release `{backend}`")
                 return
             print("Will release backend")
             tasks.append(self.release_backend(backend))
@@ -549,16 +541,7 @@ class CommandRunner(object):
         # gather and wait
         print("Awaiting second release publishing task set")
         await self.gather_and_await(tasks)
-        tasks = []
-
-        # post-release stuff
-
-        # send changelog to #engineering
-        # engineering_ch_id = "C03NKKYL4"
-        # tasks.append(self.git_release_diff(release_name=prev_release, channel=engineering_ch_id))
-
-        # cleanup old deployments
-        tasks.append(self.cleanup())
+        tasks = [self.cleanup()]
 
         # gather and wait
         print("Awaiting cleanup")
@@ -575,51 +558,56 @@ class CommandRunner(object):
 
     async def release_backend(self, release_name):
         """Release the staged backend"""
-        self.bot.send("Releasing %s..." % release_name)
+        self.bot.send(f"Releasing {release_name}...")
         print("Releasing backend ", release_name)
         await self.require_deployment_tool()
         await self.run_subprocess(
-            ["./"+DEPLOYMENTS_CMD, "switchregions", release_name, "prod"],
+            [f"./{DEPLOYMENTS_CMD}", "switchregions", release_name, "prod"],
             logfile_name="albswitch",
             error_mesg="Load-balancing error!",
-            success_mesg="%s now available on alpha.kite.com" % release_name)
+            success_mesg=f"{release_name} now available on alpha.kite.com",
+        )
 
     async def release_macos_client(self, pct):
         """Release the staged MacOS client"""
-        self.bot.send("Releasing staged MacOS client at {}%".format(pct))
+        self.bot.send(f"Releasing staged MacOS client at {pct}%")
         print("Releasing staged MacOS client")
         await self.run_subprocess(
             [os.path.join(self.SCRIPTS, "release_staged_client.sh")],
             logfile_name="release-client",
             error_mesg="Client release error!",
             success_mesg="Released client",
-            env={'PLATFORM': 'mac', 'CANARY_PERCENTAGE': '{}'.format(pct)},
+            env={'PLATFORM': 'mac', 'CANARY_PERCENTAGE': f'{pct}'},
         )
 
     async def release_windows_client(self, pct):
         """Release the staged Windows client"""
 
-        self.bot.send("Releasing staged Windows client at {}%".format(pct))
+        self.bot.send(f"Releasing staged Windows client at {pct}%")
         print("Releasing staged Windows client")
         await self.run_subprocess(
-            [os.path.join(self.SCRIPTS, "release_staged_client.sh"), self.SENDER, str(pct)],
+            [
+                os.path.join(self.SCRIPTS, "release_staged_client.sh"),
+                self.SENDER,
+                str(pct),
+            ],
             logfile_name="release-windows",
             error_mesg="Windows release error!",
             success_mesg="Released windows client",
-            env={'PLATFORM': 'windows', 'CANARY_PERCENTAGE': '{}'.format(pct)},
+            env={'PLATFORM': 'windows', 'CANARY_PERCENTAGE': f'{pct}'},
         )
 
     async def release_linux_client(self, pct):
         """Release the staged Linux client"""
 
-        self.bot.send("Releasing staged Linux client at {}%".format(pct))
+        self.bot.send(f"Releasing staged Linux client at {pct}%")
         print("Releasing staged Linux client")
         await self.run_subprocess(
             [os.path.join(self.SCRIPTS, "release_staged_client.sh"), str(pct)],
             logfile_name="release-linux",
             error_mesg="Linux release error!",
             success_mesg="Released linux client",
-            env={'PLATFORM': 'linux', 'CANARY_PERCENTAGE': '{}'.format(pct)},
+            env={'PLATFORM': 'linux', 'CANARY_PERCENTAGE': f'{pct}'},
         )
 
     async def release_website(self, **kwargs):
@@ -671,62 +659,66 @@ class CommandRunner(object):
         repo, pull_output = self.setup_repo_git(repo_name)
 
         # if the pull had changes, publish
-        if "Already up to date." not in pull_output:
-            if not self.safe_mode:
-                pkg_dir = os.path.join(self.HOME_DIR, repo_name)
-                self.bot.send("Publishing {} pkg".format(repo_name))
-                print("Publishing {} pkg".format(repo_name))
-                await self.run_subprocess(
-                    [os.path.join(self.ROOT_GIT_REPO, "scripts", "publish_npm_pkg.sh")],
-                    cwd=pkg_dir,
-                    success_mesg="Published {} pkg".format(repo_name)
+        if "Already up to date." in pull_output:
+            print(f"No changes to master for {repo_name}, skip publish")
+            self.bot.send(f"No changes to master for {repo_name}, skip publish")
+
+        elif not self.safe_mode:
+            pkg_dir = os.path.join(self.HOME_DIR, repo_name)
+            self.bot.send(f"Publishing {repo_name} pkg")
+            print(f"Publishing {repo_name} pkg")
+            await self.run_subprocess(
+                [
+                    os.path.join(
+                        self.ROOT_GIT_REPO, "scripts", "publish_npm_pkg.sh"
                     )
+                ],
+                cwd=pkg_dir,
+                success_mesg=f"Published {repo_name} pkg",
+            )
                 # if successful, push up changes made to package.json
                 # publish_npm_pkg.sh will have already made a version commit
-                print("pushing {} commit".format(repo_name))
-                repo.git.push()
-            else:
-                self.bot.send("no {} publish, we're in safe mode".format(repo_name))
+            print(f"pushing {repo_name} commit")
+            repo.git.push()
         else:
-            print("No changes to master for {}, skip publish".format(repo_name))
-            self.bot.send("No changes to master for {}, skip publish".format(repo_name))
+            self.bot.send(f"no {repo_name} publish, we're in safe mode")
 
     async def publish_atom_plugin(self):
         """Publish the atom plugin"""
         repo, pull_output = self.setup_repo_git("atom-plugin")
-        git = repo.git
-
         # if the pull had changes, publish
-        if "Already up to date." not in pull_output:
-            if not self.safe_mode:
-                self.bot.send("Publishing atom plugin")
-                print("Publishing atom plugin")
-                await self.run_subprocess(
-                    ["npm", "run", "prepublishOnly"],
-                    cwd=os.path.join(self.HOME_DIR, "atom-plugin"),
-                    success_mesg="Bundled atom plugin"
-                )
-
-                try:
-                    git.add(A=True)
-                except Exception as ex:
-                    self.bot.send("Error git adding bundled Atom js file")
-                try:
-                    git.commit(m="new publish bundle")
-                except GitCommandError:
-                    # no changes, don't push
-                    self.bot.send("Error committing generated atom js bundle")
-
-                await self.run_subprocess(
-                    ["apm", "publish", "minor"],
-                    cwd=os.path.join(self.HOME_DIR, "atom-plugin"),
-                    success_mesg="Published atom plugin"
-                    )
-            else:
-                self.bot.send("no atom publish, we're in safe mode")
-        else:
+        if "Already up to date." in pull_output:
             print("No changes to master for atom, skip publish")
             self.bot.send("No changes to master for atom, skip publish")
+
+        elif not self.safe_mode:
+            self.bot.send("Publishing atom plugin")
+            print("Publishing atom plugin")
+            await self.run_subprocess(
+                ["npm", "run", "prepublishOnly"],
+                cwd=os.path.join(self.HOME_DIR, "atom-plugin"),
+                success_mesg="Bundled atom plugin"
+            )
+
+            git = repo.git
+
+            try:
+                git.add(A=True)
+            except Exception as ex:
+                self.bot.send("Error git adding bundled Atom js file")
+            try:
+                git.commit(m="new publish bundle")
+            except GitCommandError:
+                # no changes, don't push
+                self.bot.send("Error committing generated atom js bundle")
+
+            await self.run_subprocess(
+                ["apm", "publish", "minor"],
+                cwd=os.path.join(self.HOME_DIR, "atom-plugin"),
+                success_mesg="Published atom plugin"
+                )
+        else:
+            self.bot.send("no atom publish, we're in safe mode")
 
     async def publish_vscode_plugin(self):
         """Publish the vs code plugin"""
@@ -740,45 +732,45 @@ class CommandRunner(object):
             return
 
         repo, pull_output = self.setup_repo_git("vscode-plugin")
-        git = repo.git
-
         # if the pull had changes, publish
-        if "Already up to date." not in pull_output:
-            if not self.safe_mode:
-                self.bot.send("Publishing vscode plugin")
-                print("Publishing vscode plugin")
+        if "Already up to date." in pull_output:
+            print("No changes to master for vscode, skip publish")
+            self.bot.send("No changes to master for vscode, skip publish")
 
-                await self.run_subprocess(
-                    ["npm", "run", "cleanup"],
-                    cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
-                    success_mesg="Cleaned up"
-                )
+        elif not self.safe_mode:
+            self.bot.send("Publishing vscode plugin")
+            print("Publishing vscode plugin")
 
-                await self.run_subprocess(
-                    ["npm", "install"],
-                    cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
-                    success_mesg="Finished `npm install`"
-                )
+            await self.run_subprocess(
+                ["npm", "run", "cleanup"],
+                cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
+                success_mesg="Cleaned up"
+            )
 
-                await self.run_subprocess(
-                    ["vsce", "publish", "minor", "-p", token],
-                    cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
-                    success_mesg="Created new minor version"
-                )
+            await self.run_subprocess(
+                ["npm", "install"],
+                cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
+                success_mesg="Finished `npm install`"
+            )
+
+            await self.run_subprocess(
+                ["vsce", "publish", "minor", "-p", token],
+                cwd=os.path.join(self.HOME_DIR, "vscode-plugin"),
+                success_mesg="Created new minor version"
+            )
+
+            git = repo.git
 
                 # add new publish commit
                 # the below is erroring out - the commit specifically... (why??)
                 # Hypothesis: the publish command automatically makes a version commit and we just need to push
-                try:
-                    git.push()
-                except GitCommandError as err:
-                    print("Error raised trying to push vscode publish commit: `{}`".format(err))
-                    self.bot.send("Error raised trying to push vscode publish commit: `{}`".format(err))
-            else:
-                self.bot.send("skipping vscode publish, safe mode enabled")
+            try:
+                git.push()
+            except GitCommandError as err:
+                print(f"Error raised trying to push vscode publish commit: `{err}`")
+                self.bot.send(f"Error raised trying to push vscode publish commit: `{err}`")
         else:
-            print("No changes to master for vscode, skip publish")
-            self.bot.send("No changes to master for vscode, skip publish")
+            self.bot.send("skipping vscode publish, safe mode enabled")
 
 
     def update_readmes(self):
@@ -826,18 +818,21 @@ class CommandRunner(object):
             try:
                 git.add(d)
             except Exception as ex:
-                self.bot.send("Error git adding README for `{}`: \n```\n{}\n```".format(d, exception_str(ex)))
+                self.bot.send(
+                    f"Error git adding README for `{d}`: \n```\n{exception_str(ex)}\n```"
+                )
         for d in plugin_images_dirs:
             try:
                 git.add(d)
             except Exception as ex:
-                self.bot.send("Error git adding README for `{}`: \n```\n{}\n```".format(d, exception_str(ex)))
+                self.bot.send(
+                    f"Error git adding README for `{d}`: \n```\n{exception_str(ex)}\n```"
+                )
         try:
             git.commit(m="update READMEs")
         except GitCommandError:
             # no changes, don't push
             self.bot.send("No README changes")
-            pass
         else:
             git.pull("--rebase", "origin", "master")
             if not self.safe_mode:
@@ -856,12 +851,17 @@ class CommandRunner(object):
         Use the deployment tool to check if the new deployment tagged with release_branch is ready
         """
 
-        self.bot.send("Checking deploy %s..." % release_branch)
+        self.bot.send(f"Checking deploy {release_branch}...")
         print("Checking deploy ", release_branch)
         await self.require_deployment_tool()
         proc = await asyncio.create_subprocess_exec(
-            "./"+DEPLOYMENTS_CMD, "describeregions", release_branch, "json",
-            stdout=subprocess.PIPE, cwd=self.SCRIPTS)
+            f"./{DEPLOYMENTS_CMD}",
+            "describeregions",
+            release_branch,
+            "json",
+            stdout=subprocess.PIPE,
+            cwd=self.SCRIPTS,
+        )
         so, _ = await proc.communicate()
         await proc.wait()
         # convert binary string output to normal string
@@ -885,7 +885,7 @@ class CommandRunner(object):
 
         # if we got responses from fewer than 3 regions, we're not ready
         if len(regions) < 3:
-            notReadyMsg = "{} not started in all regions yet ({} out of 3 found)".format(release_branch, len(regions))
+            notReadyMsg = f"{release_branch} not started in all regions yet ({len(regions)} out of 3 found)"
             print(notReadyMsg)
             self.bot.send(notReadyMsg)
             return False
@@ -893,18 +893,17 @@ class CommandRunner(object):
         # check readiness
         not_ready = collections.Counter()
         ready = True
-        for region_name, region in regions.items():
+        for region in regions.values():
             for deployment in region:
                 if deployment["Status"] != "ready":
                     not_ready[deployment["Status"]] += 1
                     ready = False
 
         if ready:
-            print("Release {} is ready in all regions".format(release_branch))
-            self.bot.send("Looks like %s is ready in all regions!" % release_branch)
+            print(f"Release {release_branch} is ready in all regions")
+            self.bot.send(f"Looks like {release_branch} is ready in all regions!")
         else:
-            notReadyMsg = "{} is not ready - {} servers down, {} servers loading".format(
-                    release_branch, not_ready["down"], not_ready["loading"])
+            notReadyMsg = f'{release_branch} is not ready - {not_ready["down"]} servers down, {not_ready["loading"]} servers loading'
             print(notReadyMsg)
             self.bot.send(notReadyMsg)
 
@@ -931,7 +930,7 @@ class CommandRunner(object):
                     status = "errored"
                 else:
                     status = "done"
-            text += "{}: {}\n".format(task_name, status)
+            text += f"{task_name}: {status}\n"
 
         # remove trailing newlines
         text = text.strip()
@@ -948,10 +947,11 @@ class CommandRunner(object):
         print("Cleaning up old deployments")
         await self.require_deployment_tool()
         await self.run_subprocess(
-            ["./"+DEPLOYMENTS_CMD, "cleanupregions"],
+            [f"./{DEPLOYMENTS_CMD}", "cleanupregions"],
             logfile_name="cleanupregions",
             error_mesg="Error cleaning regions!",
-            success_mesg="Cleanupregions completed")
+            success_mesg="Cleanupregions completed",
+        )
 
     async def changelog(self):
         """Show changelog"""
@@ -962,7 +962,7 @@ class CommandRunner(object):
 
         Used for testing async functionality
         """
-        self.bot.send("Sleeping for {} seconds".format(seconds))
+        self.bot.send(f"Sleeping for {seconds} seconds")
         await asyncio.sleep(seconds)
         self.bot.send("I'm awake!")
 
@@ -972,9 +972,9 @@ class CommandRunner(object):
 
     async def hold_lock(self, lock, seconds):
         """Acquire the given lock for some seconds"""
-        self.bot.send('Acquired lock "{}", holding it for {} seconds...'.format(lock, seconds))
+        self.bot.send(f'Acquired lock "{lock}", holding it for {seconds} seconds...')
         await asyncio.sleep(seconds)
-        self.bot.send('Released lock "{}"'.format(lock))
+        self.bot.send(f'Released lock "{lock}"')
 
     ## Utility functions ##
 
@@ -993,14 +993,14 @@ class CommandRunner(object):
         git.checkout(ref)
         if update_submodules:
             git.submodule("update", "--force", "--recursive")
-        print("git successfully reset to latest {}".format(ref))
+        print(f"git successfully reset to latest {ref}")
 
     async def git_new_release_branch(self):
         """Creates a new release branch at the current state, pushes, and returns branch name"""
         r = await self.get_repo()
         git = r.git
         ts = datetime.now().strftime("%Y%m%dT%H%M%S")
-        branch_name = "release_{}".format(ts)
+        branch_name = f"release_{ts}"
         git.checkout("-b", branch_name)
         if not self.safe_mode:
             git.push("origin", branch_name)
@@ -1023,7 +1023,7 @@ class CommandRunner(object):
             if not submodule.path.startswith("plugins/"):
                 continue
 
-            print("pulling plugin submodule with path: `{}`".format(submodule.path))
+            print(f"pulling plugin submodule with path: `{submodule.path}`")
             await self.run_subprocess(
                 ["git", "submodule", "update", "--remote", "--force", submodule.path],
                 cwd=self.GIT_REPO,
@@ -1050,19 +1050,19 @@ class CommandRunner(object):
 
         # create a new branch for plugins
         ts = datetime.now().strftime("%Y%m%dT%H%M%S")
-        branch_name = "bindata_build_{}".format(ts)
-        self.bot.send("Creating bindata build PR {}".format(branch_name))
+        branch_name = f"bindata_build_{ts}"
+        self.bot.send(f"Creating bindata build PR {branch_name}")
         print("creating bindata build PR")
         git.checkout("-b", branch_name)
         # add bindata
-        print("adding bindata at repo.working_dir: `{}`".format(repo.working_dir))
+        print(f"adding bindata at repo.working_dir: `{repo.working_dir}`")
         git.add(os.path.join(repo.working_dir, "**", "bindata.go"))
         # commit and push
         print("committing bindata")
-        git.commit("-m", "bindata build {}".format(ts))
+        git.commit("-m", f"bindata build {ts}")
         if self.safe_mode:
             self.bot.send("safe mode enabled, aborting before pushing or PR")
-            self.bot.send("bindata build available locally on branch {}".format(branch_name))
+            self.bot.send(f"bindata build available locally on branch {branch_name}")
             return
 
         print("pushing bindata")
@@ -1073,7 +1073,7 @@ class CommandRunner(object):
         proc = subprocess.run(
             ["hub", "pull-request", "-m", pr_message], cwd=repo.working_dir, stdout=subprocess.PIPE, encoding="utf8")
         pr_link = proc.stdout.strip()
-        self.bot.send("Created PR for {} at {}".format(branch_name, pr_link))
+        self.bot.send(f"Created PR for {pr_message} at {pr_link}")
         print("Created Bindata PR")
         print("CI status: ")
 
@@ -1090,7 +1090,7 @@ class CommandRunner(object):
             git.checkout("master")
             git.pull("origin", "master")
             # merge PR
-            print("Attempting to merge pr: `{}`".format(pr_link))
+            print(f"Attempting to merge pr: `{pr_link}`")
             proc = subprocess.run(["hub", "merge", pr_link], cwd=repo.working_dir, stdout=subprocess.PIPE, encoding="utf8")
             output = proc.stdout.strip()
             print(output)
@@ -1113,11 +1113,12 @@ class CommandRunner(object):
         git = r.git
         git.fetch()
         changes = git.log(
-            "origin/{}..origin/master".format(release_name),
+            f"origin/{release_name}..origin/master",
             pretty="format:[%ad] %an: %s",
-            date="short")
+            date="short",
+        )
         # wrap in code block with title
-        changes = "Changes since {}:\n```\n{}\n```".format(release_name, changes)
+        changes = f"Changes since {release_name}:\n```\n{changes}\n```"
 
         # send to channel where command came from
         if not channel:
@@ -1128,14 +1129,17 @@ class CommandRunner(object):
 
     async def get_release_name(self, target="prod"):
         """Get the name of the current release on target"""
-        self.bot.send("Getting release name on {}".format(target))
+        self.bot.send(f"Getting release name on {target}")
         await self.require_deployment_tool()
 
         # NOTE: we call subprocess_exec directly instead of using run_subprocess because we want to
         # retrieve and use the output
         proc = await asyncio.create_subprocess_exec(
-            "./"+DEPLOYMENTS_CMD, "list",
-            stdout=subprocess.PIPE, cwd=self.SCRIPTS)
+            f"./{DEPLOYMENTS_CMD}",
+            "list",
+            stdout=subprocess.PIPE,
+            cwd=self.SCRIPTS,
+        )
         so, _ = await proc.communicate()
         await proc.wait()
         # convert binary string output to normal string
@@ -1170,12 +1174,17 @@ class CommandRunner(object):
     async def require_deployment_tool(self, rebuild=False):
         """Check if the deployments tool has been built and build if not"""
         if rebuild or not os.path.exists(os.path.join(self.SCRIPTS, DEPLOYMENTS_CMD)):
-            print("Building {} tool".format(DEPLOYMENTS_CMD))
+            print(f"Building {DEPLOYMENTS_CMD} tool")
             await self.run_subprocess(
-                ["go", "build", "github.com/kiteco/kiteco/kite-go/cmds/"+DEPLOYMENTS_CMD],
+                [
+                    "go",
+                    "build",
+                    f"github.com/kiteco/kiteco/kite-go/cmds/{DEPLOYMENTS_CMD}",
+                ],
                 logfile_name="go-build-deployments",
-                error_mesg="Error building `{}` tool".format(DEPLOYMENTS_CMD),
-                success_mesg="Built `{}` tool successfully".format(DEPLOYMENTS_CMD))
+                error_mesg=f"Error building `{DEPLOYMENTS_CMD}` tool",
+                success_mesg=f"Built `{DEPLOYMENTS_CMD}` tool successfully",
+            )
 
     # pylint: disable=too-many-arguments
     async def run_subprocess(
@@ -1192,15 +1201,13 @@ class CommandRunner(object):
 
         if self.safe_mode:
             # print out all subprocess commands and arguments while in safe mode
-            bot.send("running {} in dir {}".format(" ".join(args), cwd))
+            bot.send(f'running {" ".join(args)} in dir {cwd}')
 
         # mkdir -p $self.SCRIPT_OUTPUT
         try:
             os.makedirs(self.SCRIPT_OUTPUT)
         except OSError as e:
-            if e.errno == errno.EEXIST and os.path.isdir(self.SCRIPT_OUTPUT):
-                pass
-            else:
+            if e.errno != errno.EEXIST or not os.path.isdir(self.SCRIPT_OUTPUT):
                 raise
 
         if env is not None:
@@ -1209,8 +1216,8 @@ class CommandRunner(object):
             env = self.cmd_env
 
         ts = datetime.now().isoformat()
-        outpath = os.path.join(self.SCRIPT_OUTPUT, "%s-out-%s.txt" % (logfile_name, ts))
-        errpath = os.path.join(self.SCRIPT_OUTPUT, "%s-err-%s.txt" % (logfile_name, ts))
+        outpath = os.path.join(self.SCRIPT_OUTPUT, f"{logfile_name}-out-{ts}.txt")
+        errpath = os.path.join(self.SCRIPT_OUTPUT, f"{logfile_name}-err-{ts}.txt")
         with open(outpath, "w") as outfile, open(errpath, "w") as errfile:
             print("subprocess info:", args, outfile, errfile, cwd, sep="\n")
             proc = await asyncio.create_subprocess_exec(*args, stdout=outfile, stderr=errfile, cwd=cwd, env=env)
@@ -1221,7 +1228,7 @@ class CommandRunner(object):
                 bot.upload(os.path.basename(outpath), outpath)
 
             if success_ping is not None:
-                bot.send("@{} {}".format(success_ping, success_mesg))
+                bot.send(f"@{success_ping} {success_mesg}")
             else:
                 bot.send(success_mesg)
 
@@ -1234,7 +1241,7 @@ class CommandRunner(object):
                 self.try_uploading(additional_logfile_path)
 
             if error_ping is not None:
-                bot.send("@{} {}".format(error_ping, error_mesg))
+                bot.send(f"@{error_ping} {error_mesg}")
             else:
                 bot.send(error_mesg)
 
@@ -1242,12 +1249,12 @@ class CommandRunner(object):
 
     def try_uploading(self, filepath):
         """Try to upload a file through slack"""
-        self.bot.send("attempting to upload filepath: %s" % filepath)
+        self.bot.send(f"attempting to upload filepath: {filepath}")
         for path in glob.glob(filepath):
             if os.path.isdir(path):
-                self.bot.send("[unable to upload file because it is a directory: %s]" % path)
+                self.bot.send(f"[unable to upload file because it is a directory: {path}]")
             elif os.stat(path).st_size == 0:
-                self.bot.send("[unable to upload file because it is empty: %s]" % path)
+                self.bot.send(f"[unable to upload file because it is empty: {path}]")
             else:
                 self.bot.upload(os.path.basename(path), path)
 
@@ -1262,9 +1269,7 @@ class CommandRunner(object):
     def check_exceptions(self, results):
         """Check results for exceptions and raise them"""
 
-        exceptions = [r for r in results if isinstance(r, Exception)]
-
-        if exceptions:
+        if exceptions := [r for r in results if isinstance(r, Exception)]:
             raise GatherError("The following exceptions were raised:\n\n```\n{}\n```".format(
                 "\n```\n```\n".join(
                     [exception_str(e) for e in exceptions])))
@@ -1275,7 +1280,4 @@ def exception_str(e):
 
 class GatherError(Exception):
     """Exception for when some task errors in an async gather"""
-    pass
-
-if __name__ == "__main__":
     pass

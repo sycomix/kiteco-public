@@ -106,10 +106,12 @@ def main():
     trainer = AdamTrainer(model, BaseConfig(steps=args.steps, learning_rate=1e-5, skip_grad_summaries=True))
 
     if args.data_gen_local:
-        logging.info('using file data feeder with {}'.format(args.in_dir))
+        logging.info(f'using file data feeder with {args.in_dir}')
         feeder = FileDataFeeder(args.in_dir)
     elif args.use_synced_data:
-        logging.info('using sync data feeder with {} at {}'.format(args.in_dir, args.syncer_endpoint))
+        logging.info(
+            f'using sync data feeder with {args.in_dir} at {args.syncer_endpoint}'
+        )
         feeder = SyncDataFeeder(args.in_dir, args.syncer_endpoint)
     else:
         req = RequestInit(

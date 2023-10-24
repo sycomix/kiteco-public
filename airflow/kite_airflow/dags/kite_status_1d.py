@@ -52,27 +52,31 @@ dag = DAG(
 kite_status_config = kite_metrics.load_context('kite_status')
 kite_status_schema = kite_metrics.load_schema('kite_status')
 
-schema_reload_ops = []
-
-for table_name in ['kite_status', 'kite_status_segment', 'kite_status_normalized']:
-    schema_reload_ops.append(AWSAthenaOperator(
+schema_reload_ops = [
+    AWSAthenaOperator(
         aws_conn_id='aws_us_east_1',
-        task_id='drop_{}'.format(table_name),
+        task_id=f'drop_{table_name}',
         query='DROP TABLE {{params.table_name}}',
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database='kite_metrics',
         dag=dag,
         params={'table_name': table_name},
-    ) >> AWSAthenaOperator(
+    )
+    >> AWSAthenaOperator(
         aws_conn_id='aws_us_east_1',
-        task_id='create_{}'.format(table_name),
-        query='athena/tables/{}.tmpl.sql'.format(table_name),
+        task_id=f'create_{table_name}',
+        query=f'athena/tables/{table_name}.tmpl.sql',
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database='kite_metrics',
         dag=dag,
-        params={'schema': kite_status_schema, 'table_name': table_name}
-    ))
-
+        params={'schema': kite_status_schema, 'table_name': table_name},
+    )
+    for table_name in [
+        'kite_status',
+        'kite_status_segment',
+        'kite_status_normalized',
+    ]
+]
 insert_kite_status_normalized = AWSAthenaOperator(
     aws_conn_id='aws_us_east_1',
     task_id='insert_kite_status_normalized',
@@ -163,33 +167,41 @@ def load_athena_to_mixpanel(task_instance, execution_date, dag_run, storage_task
         if i <= start_row:
             continue
         try:
-            insert_id = str(base64.b64encode(
-                hashlib.md5('{}::{}'.format(
-                    rec['userid'],
-                    execution_date.strftime('%Y/%m/%d')).encode('utf8')
-                ).digest())[:16])
-            rec.update({
-                'time': rec['end_time'],
-                '_group': 'firehose/kite_status/{}/'.format(execution_date.strftime('%Y/%m/%d')),
-                '_version': '1.0.0',
-                '$insert_id': insert_id,
-            })
+            insert_id = str(
+                base64.b64encode(
+                    hashlib.md5(
+                        f"{rec['userid']}::{execution_date.strftime('%Y/%m/%d')}".encode(
+                            'utf8'
+                        )
+                    ).digest()
+                )[:16]
+            )
+            rec.update(
+                {
+                    'time': rec['end_time'],
+                    '_group': f"firehose/kite_status/{execution_date.strftime('%Y/%m/%d')}/",
+                    '_version': '1.0.0',
+                    '$insert_id': insert_id,
+                }
+            )
             user_id = rec['userid']
             name = event_names.get(rec['event'])
             if name is None:
                 continue
 
-            if datetime.datetime.today() - execution_date < datetime.timedelta(days=4):
+            if datetime.datetime.now() - execution_date < datetime.timedelta(
+                days=4
+            ):
                 mp_client.track(user_id, name, rec)
             else:
                 ts = rec.pop('time')
                 mp_client.import_data(Variable.get('mixpanel_credentials', deserialize_json=True)['api_key'], user_id, name, ts, rec)
             if i > 0 and i % 10000 == 0:
-                logger.info("Processed line {}".format(i))
+                logger.info(f"Processed line {i}")
                 dag_run.get_task_instance(storage_task_name).xcom_push(key='progress', value=i)
         except Exception:
             dag_run.get_task_instance(storage_task_name).xcom_push(key='progress', value=i-100)
-            logger.exception("Error processing line {}, content={}".format(i, rec))
+            logger.exception(f"Error processing line {i}, content={rec}")
             raise
     mp_consumer.flush()
 
@@ -216,7 +228,7 @@ def load_athena_to_cio(task_instance, execution_date, dag_run, storage_task_name
             })
             user_id = rec['userid']
 
-            if not user_id or not all(ord(c) < 128 for c in user_id):
+            if not user_id or any(ord(c) >= 128 for c in user_id):
                 continue
 
             name = event_names.get(rec['event'])
@@ -347,20 +359,23 @@ update_schema_dag = DAG(
 )
 
 for table_name in ['kite_status', 'kite_status_segment', 'kite_status_normalized']:
-    AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='drop_{}'.format(table_name),
-        query='DROP TABLE {{params.table_name}}',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=update_schema_dag,
-        params={'table_name': table_name},
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='create_{}'.format(table_name),
-        query='athena/tables/{}.tmpl.sql'.format(table_name),
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=update_schema_dag,
-        params={'schema': kite_status_schema, 'table_name': table_name}
+    (
+        AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'drop_{table_name}',
+            query='DROP TABLE {{params.table_name}}',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=update_schema_dag,
+            params={'table_name': table_name},
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'create_{table_name}',
+            query=f'athena/tables/{table_name}.tmpl.sql',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=update_schema_dag,
+            params={'schema': kite_status_schema, 'table_name': table_name},
+        )
     )

@@ -74,7 +74,7 @@ class DataFeeder(object):
         self.dataset = dataset
         self.feature_encoder = feature_encoder
         self.batch_size = batch_size
-        self.n_batches = int(len(dataset.records) / batch_size)
+        self.n_batches = len(dataset.records) // batch_size
 
     def __iter__(self) -> Generator[Batch, None, None]:
         for batch_i in range(self.n_batches):

@@ -24,9 +24,7 @@ class SummaryInfo(NamedTuple):
     def get_default_scalar(self) -> Any:
         if self.dtype is tf.string:
             return 'NA'
-        if self.dtype in [tf.int32, tf.int64]:
-            return 0
-        return 0.
+        return 0 if self.dtype in [tf.int32, tf.int64] else 0.
 
     def with_name(self, name: str) -> 'SummaryInfo':
         return SummaryInfo(
@@ -52,7 +50,11 @@ class SummaryOp(NamedTuple):
             summaries: List[tf.Summary] = []
 
             for metric in metrics:
-                ph = tf.placeholder(metric.dtype, shape=metric.shape, name='placeholders/{}'.format(metric.name))
+                ph = tf.placeholder(
+                    metric.dtype,
+                    shape=metric.shape,
+                    name=f'placeholders/{metric.name}',
+                )
                 infos[metric.name] = _InfoAndPlaceholder(ph, metric)
                 if metric.dtype == tf.string:
                     summary = tf.summary.text(metric.name, ph)

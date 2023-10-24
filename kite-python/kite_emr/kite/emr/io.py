@@ -24,8 +24,7 @@ def read_as_json(fd):
         yield key, json.loads(val.decode())
 
 def read(fd):
-    for parts in _read_base64_zlib(fd):
-        yield parts
+    yield from _read_base64_zlib(fd)
 
 def _read_base64_zlib(fd):
     for parts in _read(fd):
@@ -36,7 +35,7 @@ def _read_base64_zlib(fd):
             value = zlib.decompress(
                 base64.urlsafe_b64decode(_filter_base64(value)))
         except Exception as ex:
-            s = "error decoding key: %s, err: %s" % (key, ex)
+            s = f"error decoding key: {key}, err: {ex}"
             print(s, file=sys.stderr)
             continue
 

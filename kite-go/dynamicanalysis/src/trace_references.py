@@ -171,8 +171,9 @@ class OffsetResolver(object):
         self.cumulative = [0]
         self.src = src
         self.lines = src.split("\n")
-        for line in self.lines:
-            self.cumulative.append(self.cumulative[-1] + len(line) + 1)
+        self.cumulative.extend(
+            self.cumulative[-1] + len(line) + 1 for line in self.lines
+        )
 
     def byteoffset(self, lineno, col_offset):
         return self.cumulative[lineno-1] + col_offset
@@ -248,7 +249,7 @@ def dotted_refs(dotted_name, begin, stem=None):
         if stem is None:
             stem = part
         else:
-            stem += "." + part
+            stem += f".{part}"
         yield dict(
             begin=begin,
             end=begin+len(part),
@@ -279,12 +280,17 @@ def static_references(src, syntaxtree):
                 refs.extend(dotted_refs(alias.name, begin, frompkg))
                 if alias.asname:
                     begin, end = find_near_node(alias.asname, node, offsetresolver, offset=end)
-                    refs.append(dict(
-                        begin=begin,
-                        end=end,
-                        fully_qualified=(frompkg+"."+alias.name if frompkg else alias.name),
-                        expression=alias.asname,
-                        node_type="import"))
+                    refs.append(
+                        dict(
+                            begin=begin,
+                            end=end,
+                            fully_qualified=f"{frompkg}.{alias.name}"
+                            if frompkg
+                            else alias.name,
+                            expression=alias.asname,
+                            node_type="import",
+                        )
+                    )
 
         if isinstance(node, ast.Print):
             # Deal with a print statement
@@ -340,7 +346,7 @@ def dynamic_references(src, evaluations):
 
             line = lines[node.lineno-1]
             rightmost = max(getattr(node, "col_offset", 0) for node in ast.walk(node.value))
-            attr_col_offset = line.find("." + node.attr, rightmost+1) + 1
+            attr_col_offset = line.find(f".{node.attr}", rightmost+1) + 1
             if attr_col_offset == -1:
                 sys.stderr.write("warning: could not find '%s' on line %d\n" % (node.attr, node.lineno))
                 continue
@@ -348,13 +354,16 @@ def dynamic_references(src, evaluations):
             begin = pos.byteoffset(node.lineno, attr_col_offset)
             end = begin + len(node.attr)
 
-            refs.append(dict(
-                begin=begin,
-                end=end,
-                expression=node.attr,
-                fully_qualified=fqn + "." + node.attr,
-                instance=instance,
-                node_type="attribute"))
+            refs.append(
+                dict(
+                    begin=begin,
+                    end=end,
+                    expression=node.attr,
+                    fully_qualified=f"{fqn}.{node.attr}",
+                    instance=instance,
+                    node_type="attribute",
+                )
+            )
 
         elif isinstance(evaluation, CallEvaluation):
             node, func, returnvalue = evaluation

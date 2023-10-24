@@ -48,7 +48,7 @@ def by_user(data: List[SignatureData]) -> Dict[str, List[SignatureData]]:
 def by_day(data: List[SignatureData]) -> Dict[str, List[SignatureData]]:
     days = {}
     for d in data:
-        ts = '{}:{}'.format(d.sent_at.month, d.sent_at.day)
+        ts = f'{d.sent_at.month}:{d.sent_at.day}'
         if ts not in days:
             days[ts] = []
         days[ts].append(d)
@@ -59,10 +59,7 @@ ByUserByDay = Dict[str, Dict[str, List[SignatureData]]]
 
 
 def by_user_by_day(data: List[SignatureData]) -> ByUserByDay:
-    user_by_day = {}
-    for usr, ds in by_user(data).items():
-        user_by_day[usr] = by_day(ds)
-    return user_by_day
+    return {usr: by_day(ds) for usr, ds in by_user(data).items()}
 
 
 def filter_inactive_days(bubd: ByUserByDay, min_active_events: int) -> ByUserByDay:
@@ -70,13 +67,10 @@ def filter_inactive_days(bubd: ByUserByDay, min_active_events: int) -> ByUserByD
     for usr, days in bubd.items():
         new_days = {}
         for day, evts in days.items():
-            active_count = 0
-            for evt in evts:
-                if evt.triggered > 0:
-                    active_count += 1
+            active_count = sum(1 for evt in evts if evt.triggered > 0)
             if active_count >= min_active_events:
                 new_days[day] = evts
-        if len(new_days) > 0:
+        if new_days:
             new_bubd[usr] = new_days
     return new_bubd
 
@@ -85,28 +79,20 @@ percentiles = [25, 50, 75, 95]
 
 
 def percentiles_str(name: str, data: list) -> str:
-    return '{} percentiles ({}): {}'.format(name, percentiles, np.percentile(data, percentiles))
+    return f'{name} percentiles ({percentiles}): {np.percentile(data, percentiles)}'
 
 
 def percentiles_triggered_per_day(bubd: ByUserByDay):
     per_days = []
     for _, days in bubd.items():
-        for _, day in days.items():
-            per_day = 0
-            for evt in day:
-               per_day += evt.triggered
-            per_days.append(per_day)
+        per_days.extend(sum(evt.triggered for evt in day) for _, day in days.items())
     print(percentiles_str('Triggered per day', per_days))
 
 
 def percentiles_shown_per_day(bubd: ByUserByDay):
     per_days = []
     for _, days in bubd.items():
-        for _, day in days.items():
-            per_day = 0
-            for evt in day:
-                per_day += evt.shown
-            per_days.append(per_day)
+        per_days.extend(sum(evt.shown for evt in day) for _, day in days.items())
     print(percentiles_str('Shown per day', per_days))
 
 

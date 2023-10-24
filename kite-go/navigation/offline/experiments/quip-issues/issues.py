@@ -62,7 +62,7 @@ def get(
         if issue.pull_request is not None:
             # We exclude issues which are pull requests.
             continue
-        urls = [url for url in regexp.findall(issue.body)]
+        urls = list(regexp.findall(issue.body))
         if not urls:
             logging.info(f"skipping body without quip links: {issue.html_url}")
             continue

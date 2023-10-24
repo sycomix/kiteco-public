@@ -52,13 +52,17 @@ def main():
             # figure out the codebook params from the shape of the codebooks/codes vars
             # cbs_entries_prod = n_codebooks * n_entries
             cbs_entries_prod, depth = map(int, v.shape)
-            codes_var = [v for v in vars if v.name == cb_var_name + "/codes:0"][0]
+            codes_var = [v for v in vars if v.name == f"{cb_var_name}/codes:0"][0]
             vocab, n_codebooks = map(int, codes_var.shape)
             n_entries = cbs_entries_prod // n_codebooks
             cb_params[cb_var_name] = CBParams(n_codebooks=n_codebooks, n_entries=n_entries, shape=(vocab, depth))
 
     # names of the regular (non-codebook) variables
-    reg_vars = {v.name: v for v in vars if not any([v.name.startswith(cb) for cb in cb_params.keys()])}
+    reg_vars = {
+        v.name: v
+        for v in vars
+        if not any(v.name.startswith(cb) for cb in cb_params)
+    }
 
     for var_name, var in reg_vars.items():
         print("\nWILL NOT compress:", var_name)
@@ -86,7 +90,7 @@ def main():
 
     with tf.Session() as sess:
         saver.restore(sess, checkpoint_path)
-        original_values = sess.run({var: var + ":0" for var in cb_params.keys()})
+        original_values = sess.run({var: f"{var}:0" for var in cb_params})
 
     # we learn the codebooks and codes for each variable
     cb_books: Dict[str, np.ndarray] = {}
@@ -105,16 +109,28 @@ def main():
     tf.reset_default_graph()
     model = Model(config, meta_info, compressed=True)
 
-    reg_saver = tf.train.Saver(var_list=[v for v in tf.global_variables() if v.name in reg_vars.keys()])
+    reg_saver = tf.train.Saver(
+        var_list=[v for v in tf.global_variables() if v.name in reg_vars]
+    )
 
     with tf.Session() as sess:
         # set the appropriate variables for the codebook embeddings
-        for var_name in cb_books.keys():
+        for var_name in cb_books:
             print(f"setting codebook/codes for {var_name}")
-            sess.run([
-                tf.assign(sess.graph.get_tensor_by_name(var_name + "/codebooks:0"), cb_books[var_name]),
-                tf.assign(sess.graph.get_tensor_by_name(var_name + "/codes:0"), cb_codes[var_name]),
-            ])
+            sess.run(
+                [
+                    tf.assign(
+                        sess.graph.get_tensor_by_name(
+                            f"{var_name}/codebooks:0"
+                        ),
+                        cb_books[var_name],
+                    ),
+                    tf.assign(
+                        sess.graph.get_tensor_by_name(f"{var_name}/codes:0"),
+                        cb_codes[var_name],
+                    ),
+                ]
+            )
 
         # set the regular variables
         reg_saver.restore(sess, checkpoint_path)

@@ -37,9 +37,9 @@ class TrafficEstimator(object):
         self.prepare_moz_data()
         self.dataset = self.moz_data.reset_index(drop=True).merge(self.gsc_data.reset_index(drop=True), 'inner', on='keywords')
         if len(self.dataset) < 500:
-            raise ValueError("Not enough value to train the model after merging Moz and GSC data, we should have "
-                             "at least 500 points after the merge and we only have {} points. Please check the datasets"
-                             .format(len(self.dataset)))
+            raise ValueError(
+                f"Not enough value to train the model after merging Moz and GSC data, we should have at least 500 points after the merge and we only have {len(self.dataset)} points. Please check the datasets"
+            )
         self.training_dataset = self.dataset[['moz_difficulty', 'moz_volume',
                               'so_rank', 'volume_ratio', 'est_clicks', 'est_impressions', 'clicks',
                               'ctr', 'impressions', 'position']].copy()
@@ -62,10 +62,7 @@ class TrafficEstimator(object):
         questions_views = self.so_data.newViews
 
         def get_question_clicks(id):
-            if id in questions_views.index:
-                return questions_views.loc[id].iloc[0]
-            else:
-                return -1
+            return questions_views.loc[id].iloc[0] if id in questions_views.index else -1
 
         self.moz_data["est_clicks"] = self.moz_data.apply(lambda r: r.volume_ratio*get_question_clicks(int(r.question_id)), axis=1)
         self.moz_data = self.moz_data[self.moz_data.est_clicks > 0].copy()
@@ -110,7 +107,7 @@ class TrafficEstimator(object):
         pipeline = Pipeline(steps=[("Scaler", scaler), ("Model", model)])
         pipeline.fit(train_data[self.features], train_data[[self.label]])
         score = pipeline.score(test_data[self.features], test_data[self.label])
-        print("{} R2 score : {}".format(self.label, score))
+        print(f"{self.label} R2 score : {score}")
 
         return pipeline, score
 

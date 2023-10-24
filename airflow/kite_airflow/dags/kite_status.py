@@ -37,10 +37,7 @@ def resolve_dotted_path(doc, path):
             return None, None
         container = container[container_name]
 
-    if field_name in container:
-        return container, field_name
-
-    return None, None
+    return (container, field_name) if field_name in container else (None, None)
 
 
 def get_index_shard(dt, granularity, epoch=datetime.date(1970, 1, 1)):
@@ -64,14 +61,14 @@ def client_event_convert_fn(docs, index_date_suffix, deployments):
             continue
 
         event = doc.get('event')
-        if event == 'Index Build':
-            index_prefix = 'index_build'
-        elif event == 'Completion Stats':
+        if event == 'Completion Stats':
             index_prefix = 'completions_selected'
+        elif event == 'Index Build':
+            index_prefix = 'index_build'
         else:
             continue
 
-        index_name = '{}_{}'.format(index_prefix, index_date_suffix)
+        index_name = f'{index_prefix}_{index_date_suffix}'
 
         for field in ['originalTimestamp']:
             if field in doc:
@@ -95,10 +92,7 @@ def client_event_convert_fn(docs, index_date_suffix, deployments):
                 data = gzip.GzipFile(fileobj=io.BytesIO(data)).read()
                 data = json.loads(data)
                 del doc['properties'][field]
-                # create one document per completion stat
-                i = 0
-                for stat in data:
-                    i += 1
+                for i, stat in enumerate(data, start=1):
                     elem = doc
                     for key in stat:
                         elem['properties'][key] = stat[key]
@@ -144,7 +138,7 @@ def kite_status_convert_fn(docs, index_date_suffix, deployments):
     total_time = 0
     for i, doc in enumerate(docs):
         if i and i % 10000 == 0:
-            logger.info('Done {} records, avg time / record={}'.format(i, total_time / i))
+            logger.info(f'Done {i} records, avg time / record={total_time / i}')
         start_time = time.perf_counter()
         if doc.get('event') != 'kite_status':
             total_time += (time.perf_counter() - start_time)
@@ -158,11 +152,17 @@ def kite_status_convert_fn(docs, index_date_suffix, deployments):
             total_time += (time.perf_counter() - start_time)
             continue
 
-        if sum(doc['properties'].get('{}_events'.format(lang), 0) for lang in kite_status_config['languages']) == 0:
+        if (
+            sum(
+                doc['properties'].get(f'{lang}_events', 0)
+                for lang in kite_status_config['languages']
+            )
+            == 0
+        ):
             total_time += (time.perf_counter() - start_time)
             continue
 
-        index_name = '{}_active_{}'.format(KS_INDEX_PREFIX, index_date_suffix)
+        index_name = f'{KS_INDEX_PREFIX}_active_{index_date_suffix}'
 
         doc = scrub(doc, kite_status_schema)
 
@@ -247,8 +247,11 @@ def bulk_index_metrics(bucket, s3_keys, granularity, key, deployments):
             dt = datetime.date(*map(int, s3_key.split('/')[2:5]))
             index_date_suffix = get_index_shard(dt, granularity)
 
-            for rec in convert_fns[key](iter_s3_file(s3_hook, bucket, s3_key), index_date_suffix, deployments):
-                yield rec
+            yield from convert_fns[key](
+                iter_s3_file(s3_hook, bucket, s3_key),
+                index_date_suffix,
+                deployments,
+            )
 
     bulk(es, iter())
 
@@ -282,7 +285,7 @@ for key, dag in [('kite_status', kite_status_dag), ('client_events', client_even
 
     def load_fn(ti, params, **kwargs):
         s3_keys = ti.xcom_pull(task_ids=skip_no_new_files.__name__, key='curr_files')
-        logger.info("Loading files {}".format(', '.join(s3_keys)))
+        logger.info(f"Loading files {', '.join(s3_keys)}")
 
         deployments_data = ti.xcom_pull(task_ids='copy_server_deployments')['values']
         id_col = deployments_data[1].index('Deployment ID')

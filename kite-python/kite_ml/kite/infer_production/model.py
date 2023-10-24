@@ -266,7 +266,7 @@ class Model(BaseModel):
         if self._train:
             self._loss = self._build_loss_op()
             self._scalars = self._build_scalars()
-            self._summaries = {k: v for k, v in self._scalars.items()}
+            self._summaries = dict(self._scalars.items())
 
     def placeholders_dict(self) -> Dict[str, tf.Tensor]:
         d = self._scope.placeholders_dict()

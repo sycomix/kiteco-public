@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--traindata', type=str)
     parser.add_argument('--checkpoint_path', type=str)
     parser.add_argument('--max_samples', type=int)
-    parser.add_argument('--out_path', type=str, default='out/{}/visdata'.format(ts))
+    parser.add_argument('--out_path', type=str, default=f'out/{ts}/visdata')
     args = parser.parse_args()
 
     logging.info('writing visualization data results to {0}'.format(args.out_path))
@@ -38,25 +38,25 @@ def main():
     feeder = split.val_feeder()
 
     num_samples = min(args.max_samples, feeder.count())
-    logging.info('will write {} samples'.format(num_samples))
+    logging.info(f'will write {num_samples} samples')
 
     model = Model(config)
 
     with tf.Session() as sess:
         model.load_checkpoint(sess, args.checkpoint_path)
 
-        for i in range(num_samples):
+        for _ in range(num_samples):
             sample: RawSample = feeder.next()
 
             feeds = model.feed_dict([sample], train=False)
             fetches = {'pred': model.pred()}
             result = sess.run(fetches, feeds)
 
-            probs = list([float(e) for e in result['pred'].flatten()])
+            probs = [float(e) for e in result['pred'].flatten()]
             record = VisRecord(sample=sample, probs=probs)
             f.write(serialize_namedtuple(record) + '\n')
 
-    logging.info('finished writing {} records'.format(num_samples))
+    logging.info(f'finished writing {num_samples} records')
 
 
 if __name__ == "__main__":

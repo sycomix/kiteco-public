@@ -124,9 +124,9 @@ class EmbeddingCompressor(object):
             embed_matrix: original embedding
             prefix: prefix of saving path
         """
-        assert os.path.exists(self._model_path + ".meta")
+        assert os.path.exists(f"{self._model_path}.meta")
         vocab_size = embed_matrix.shape[0]
-        with tf.Graph().as_default(), tf.Session() as sess:
+        with (tf.Graph().as_default(), tf.Session() as sess):
             with tf.variable_scope("Graph"):
                 word_ids_var, codes_op, reconstruct_op = self._build_export_graph(embed_matrix)
             saver = tf.train.Saver()
@@ -134,7 +134,7 @@ class EmbeddingCompressor(object):
 
             # Dump codebook
             codebook_tensor = sess.graph.get_tensor_by_name('Graph/codebook:0')
-            np.save(prefix + ".codebook", sess.run(codebook_tensor))
+            np.save(f"{prefix}.codebook", sess.run(codebook_tensor))
 
             # Dump codes
             all_codes = []
@@ -144,7 +144,7 @@ class EmbeddingCompressor(object):
                 codes = sess.run(codes_op, {word_ids_var: word_ids}).tolist()
                 all_codes += codes
             all_codes = np.array(all_codes, dtype=np.uint8)
-            np.save(prefix + ".codes", all_codes)
+            np.save(f"{prefix}.codes", all_codes)
 
     def _gumbel_dist(self, shape, eps=1e-20) -> tf.Tensor:
         U = tf.random_uniform(shape, minval=0, maxval=1)

@@ -40,7 +40,7 @@ def eval_pkglists(filtered_imports: List[List[str]], pkglists: List[List[str]]) 
 
         miss_map[len(misses)] += 1
 
-    miss_list = [(k, v) for k, v in miss_map.items()]
+    miss_list = list(miss_map.items())
     miss_list.sort(key=lambda x: x[0])
 
     cummulative = 0

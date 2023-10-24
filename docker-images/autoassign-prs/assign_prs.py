@@ -67,7 +67,7 @@ def main():
 		print("assigning label:", label)
 		github.put("/repos/kiteco/kiteco/issues/%d/labels" % pr["number"], [label])
 
-		if len(patch) > 0:
+		if patch:
 			print(patch)
 			github.patch("/repos/kiteco/kiteco/issues/%d" % pr["number"], patch)
 

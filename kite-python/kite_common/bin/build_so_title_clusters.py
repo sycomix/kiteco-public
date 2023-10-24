@@ -59,7 +59,7 @@ def main():
                     w, range(len(docs)), args.max_cluster_size)
                 if len(clusters) > args.max_cluster_num:
                     clusters = kmeans.cluster(w, range(len(docs)), args.max_cluster_num)
-                for i, cluster in enumerate(clusters):
+                for cluster in clusters:
                     data = [package_documents[p][m] for m in cluster]
                     sorted_data = sorted(data, key=lambda k: k['ViewCount'],
                                          reverse=True)

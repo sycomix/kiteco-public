@@ -50,11 +50,7 @@ class SVMClassifier(object):
         labels, one per training example, computes feature vector
         out of each training example and trains a svm model.
         """
-        # compute feature vectors from data
-        feat_vecs = []
-        for line in data:
-            feat_vecs.append(self.featurizer.features(line))
-
+        feat_vecs = [self.featurizer.features(line) for line in data]
         self.model.fit(feat_vecs, labels)
 
     def classify(self, text):
@@ -84,10 +80,7 @@ class SVMClassifier(object):
 
     def cross_validate(self, data, labels, fold):
         """Cross validation to test the performance of the model"""
-        feat_vecs = []
-        for line in data:
-            feat_vecs.append(self.featurizer.features(line))
-
+        feat_vecs = [self.featurizer.features(line) for line in data]
         scores = cross_validation.cross_val_score(
             self.model,
             feat_vecs,

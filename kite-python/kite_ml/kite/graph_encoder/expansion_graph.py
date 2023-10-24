@@ -32,24 +32,26 @@ class TrainFeed(NamedTuple):
     def assert_valid(self, edge_set: List[EdgeType], max_type: int, max_subtoken: int):
         self.lookup_nodes.assert_valid(max_type, max_subtoken)
         num_lookup_nodes = self.lookup_nodes.num_nodes()
-        assert len(self.lookup_to_expansion) == num_lookup_nodes,\
-            'len(lookup_to_expansion) {} != {} num lookup nodes'.format(
-                len(self.lookup_to_expansion), num_lookup_nodes)
+        assert (
+            len(self.lookup_to_expansion) == num_lookup_nodes
+        ), f'len(lookup_to_expansion) {len(self.lookup_to_expansion)} != {num_lookup_nodes} num lookup nodes'
 
         num_context_nodes = len(self.context_graph_nodes)
-        assert num_context_nodes == len(self.context_to_expansion), \
-            'context graph nodes {} != context to expansion {}'.format(
-                num_context_nodes, len(self.context_to_expansion))
+        assert num_context_nodes == len(
+            self.context_to_expansion
+        ), f'context graph nodes {num_context_nodes} != context to expansion {len(self.context_to_expansion)}'
 
         num_nodes = num_context_nodes + num_lookup_nodes
         assert_valid_edges(edge_set, self.edges, num_nodes)
 
         for egid in self.lookup_to_expansion:
-            assert 0 <= egid < num_nodes, \
-                'lookup to expansion out of range {} not in [0,...,{}]'.format(egid, num_nodes-1)
+            assert (
+                0 <= egid < num_nodes
+            ), f'lookup to expansion out of range {egid} not in [0,...,{num_nodes - 1}]'
         for egid in self.context_to_expansion:
-            assert 0 <= egid < num_nodes, \
-                'context to expansion out of range {} not in [0,...,{}]'.format(egid, num_nodes-1)
+            assert (
+                0 <= egid < num_nodes
+            ), f'context to expansion out of range {egid} not in [0,...,{num_nodes - 1}]'
 
     def num_nodes(self) -> int:
         return len(self.lookup_to_expansion) + len(self.context_to_expansion)

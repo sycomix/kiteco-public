@@ -134,7 +134,7 @@ class Model(BaseModel):
                 self._build_train_prediction_op()
                 self._loss = self._build_loss_op()
                 self._scalars = self._build_scalars()
-                self._summaries = {k: v for k, v in self._scalars.items()}
+                self._summaries = dict(self._scalars.items())
 
         # TODO: empty string is global variable scope, this is a hack for backwards
         # compat to make sure we can reuse variables when we create the test graph
@@ -542,11 +542,10 @@ class Model(BaseModel):
         return d
 
     def tfserving_inputs_dict(self) -> Dict[str, tf.Tensor]:
-        inputs = {
+        return {
             'context_before': self._phs.context_before,
             'context_after': self._phs.context_after,
         }
-        return inputs
 
     def tfserving_outputs_dict(self) -> Dict[str, tf.Tensor]:
         return {

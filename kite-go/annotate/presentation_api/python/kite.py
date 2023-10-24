@@ -98,7 +98,7 @@ class kite(object):
 		import fnmatch
 		do_not_recurse = []
 		if skip is not None:
-			do_not_recurse = [(p if p.startswith("/") else path+"/"+p) for p in skip]
+			do_not_recurse = [p if p.startswith("/") else f"{path}/{p}" for p in skip]
 
 		entries = dict()
 		for root, dirs, files in os.walk(path):

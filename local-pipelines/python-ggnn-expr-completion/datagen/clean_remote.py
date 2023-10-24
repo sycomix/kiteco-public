@@ -9,12 +9,12 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(m
 def run(cmd: str):
     ret = os.system(cmd)
     if ret != 0:
-        raise RuntimeError("running '{}' returned non-zero status: {}".format(cmd, ret))
+        raise RuntimeError(f"running '{cmd}' returned non-zero status: {ret}")
 
 
 def clean(host: str, directory: str):
-    os.system("ssh {} 'killall graph_data_server'".format(host))
-    run("ssh {} 'rm -rf {}/*'".format(host, directory))
+    os.system(f"ssh {host} 'killall graph_data_server'")
+    run(f"ssh {host} 'rm -rf {directory}/*'")
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     assert len(args.hosts) > 0, "need to clean at least one host"
 
     for host in args.hosts:
-        logging.info("cleaning {} on {}".format(args.dir, host))
+        logging.info(f"cleaning {args.dir} on {host}")
         clean(host, args.dir)
 
 

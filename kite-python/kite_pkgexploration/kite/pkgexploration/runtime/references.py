@@ -36,8 +36,8 @@ class ReferenceMap(object):
                     # We can't track small integer objects without hacking CPython,
                     # because they're cached in a global array. Wrapping them up in a
                     # `WrappedInt` doesn't work because it causes interactions with native code to throw up
-                    if type(val) != int or (val < -5 or 256 < val):
-                        imported_path = '{}.{}'.format(imported_name, attr)
+                    if type(val) != int or val < -5 or val > 256:
+                        imported_path = f'{imported_name}.{attr}'
                         self._dict.setdefault(importer_path, {})[id(val)] = imported_path
         except BaseException:
             pass

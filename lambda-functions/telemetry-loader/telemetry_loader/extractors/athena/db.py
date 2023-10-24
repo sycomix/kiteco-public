@@ -45,7 +45,7 @@ def run_query(config, start, end, prod=True):
 
     for i, resp in enumerate(responses):
         wait(client, resp)
-        logger.info('    {} / {} partitions created.'.format(i + 1, len(responses)))
+        logger.info(f'    {i + 1} / {len(responses)} partitions created.')
 
     data_query = _get_data_query_sql(table_name, query_tmpl, TIMEZONE, utc_time_range)
     _execute_query(client, data_query, result_loc_prefix, query_name)
@@ -56,9 +56,12 @@ def _sql_create_versioned_table(prefix, create_table_template):
         template_content = file.read()
 
     h = hashlib.sha1(template_content)
-    ctx = {'table_name': '{}_{}'.format(prefix, h.hexdigest())}
+    ctx = {'table_name': f'{prefix}_{h.hexdigest()}'}
 
-    return pystache.render(template_content, ctx), 'kite_metrics.{}'.format(ctx['table_name'])
+    return (
+        pystache.render(template_content, ctx),
+        f"kite_metrics.{ctx['table_name']}",
+    )
 
 
 def _format_prefix_string(dt):

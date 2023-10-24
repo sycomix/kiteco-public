@@ -13,12 +13,12 @@ def purge_dir(path):
 
 
 def save_model(sess: tf.compat.v1.Session, model_dir: str, inputs: Dict[str, tf.Tensor], outputs: Dict[str, tf.Tensor]):
-    logging.info("saving model to {}".format(model_dir))
+    logging.info(f"saving model to {model_dir}")
     tf.compat.v1.saved_model.simple_save(sess, model_dir, inputs=inputs, outputs=outputs)
 
 
 def save_frozen_model(sess: tf.compat.v1.Session, out_file: str, output_names: List[str]):
-    logging.info("saving frozen model to {}".format(out_file))
+    logging.info(f"saving frozen model to {out_file}")
     # Querying a tensor's name in a session produces one with a :0 suffix, but this suffix does not exist in the
     # GraphDef
     output_names = [n.replace(":0", "") for n in output_names]

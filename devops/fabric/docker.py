@@ -23,8 +23,8 @@ def ps():
 
 @task
 def stop(container_id):
-    run("sudo docker stop %s" % container_id)
+    run(f"sudo docker stop {container_id}")
 
 @task
 def restart(container_id):
-    run("sudo docker restart %s" % container_id)
+    run(f"sudo docker restart {container_id}")

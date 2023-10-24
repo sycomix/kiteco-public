@@ -32,12 +32,10 @@ class StackOverflowXMLStruct(object):
         return ret
 
     def to_proto(self):
-        count = 1
         ret = "message %s {\n" % self.proto
-        for name, fieldType in self.fields:
+        for count, (name, fieldType) in enumerate(self.fields, start=1):
             ret += "    required %s %s = %d;\n" % (
                 fieldType.lower(), name, count)
-            count += 1
         ret += "};\n\n"
         return ret
 
@@ -50,7 +48,7 @@ def main(filename):
     structs = []
     struct = None
     state = None
-    for line in open(filename).readlines():
+    for line in open(filename):
         if line.startswith("type"):
             parts = line.split()
             struct = StackOverflowXMLStruct(parts[1])
@@ -66,18 +64,15 @@ def main(filename):
             parts = line.split()
             struct.add_field(parts[0], parts[1])
 
-    gofp = open('xmlgen.go', 'w')
-    gofp.write("package stackoverflow\n\n")
+    with open('xmlgen.go', 'w') as gofp:
+        gofp.write("package stackoverflow\n\n")
 
-    protofp = open('xmlgen.proto', 'w')
-    protofp.write("package stackoverflow;\n\n")
+        with open('xmlgen.proto', 'w') as protofp:
+            protofp.write("package stackoverflow;\n\n")
 
-    for s in structs:
-        protofp.write(s.to_proto())
-        gofp.write(s.to_newfunc())
-
-    protofp.close()
-    gofp.close()
+            for s in structs:
+                protofp.write(s.to_proto())
+                gofp.write(s.to_newfunc())
 
     call(["goimports", "-w", "xmlgen.go"])
 

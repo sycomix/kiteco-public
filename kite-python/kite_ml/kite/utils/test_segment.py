@@ -40,16 +40,22 @@ class TestSegmentTopK(unittest.TestCase):
             actual_new_ids = fetches[2]
 
             expected_preds = np.array([.7, .66, 1.])
-            self.assertTrue(np.allclose(actual_preds, expected_preds),
-                            'expected {} got {}'.format(expected_preds, actual_preds))
+            self.assertTrue(
+                np.allclose(actual_preds, expected_preds),
+                f'expected {expected_preds} got {actual_preds}',
+            )
 
             expected_idxs = np.array([1, 4, 5])
-            self.assertTrue(np.all(actual_idxs == expected_idxs),
-                            'expected {} got {}'.format(expected_idxs, actual_idxs))
+            self.assertTrue(
+                np.all(actual_idxs == expected_idxs),
+                f'expected {expected_idxs} got {actual_idxs}',
+            )
 
             expected_ids = np.array([0, 1, 2])
-            self.assertTrue(np.all(expected_ids == actual_new_ids),
-                            'expected {} got {}'.format(expected_ids, actual_new_ids))
+            self.assertTrue(
+                np.all(expected_ids == actual_new_ids),
+                f'expected {expected_ids} got {actual_new_ids}',
+            )
         finally:
             sess.close()
 
@@ -84,16 +90,22 @@ class TestSegmentTopK(unittest.TestCase):
             actual_new_ids = fetches[2]
 
             expected_preds = np.array([.7, .3, .66, .33, 1.])
-            self.assertTrue(np.allclose(actual_preds, expected_preds),
-                            'expected {} got {}'.format(expected_preds, actual_preds))
+            self.assertTrue(
+                np.allclose(actual_preds, expected_preds),
+                f'expected {expected_preds} got {actual_preds}',
+            )
 
             expected_idxs = np.array([1, 0, 4, 2, 5])
-            self.assertTrue(np.all(actual_idxs == expected_idxs),
-                            'expected {} got {}'.format(expected_idxs, actual_idxs))
+            self.assertTrue(
+                np.all(actual_idxs == expected_idxs),
+                f'expected {expected_idxs} got {actual_idxs}',
+            )
 
             expected_ids = np.array([0, 0, 1, 1, 2])
-            self.assertTrue(np.all(expected_ids == actual_new_ids),
-                            'expected {} got {}'.format(expected_ids, actual_new_ids))
+            self.assertTrue(
+                np.all(expected_ids == actual_new_ids),
+                f'expected {expected_ids} got {actual_new_ids}',
+            )
         finally:
             sess.close()
 
@@ -118,15 +130,21 @@ class TestSegmentTopK(unittest.TestCase):
             actual_new_ids = fetches[2]
 
             expected_preds = np.empty((0,), dtype=np.float64)
-            self.assertTrue(np.allclose(actual_preds, expected_preds),
-                            'expected {} got {}'.format(expected_preds, actual_preds))
+            self.assertTrue(
+                np.allclose(actual_preds, expected_preds),
+                f'expected {expected_preds} got {actual_preds}',
+            )
 
             expected_idxs = np.empty((0,), dtype=np.int64)
-            self.assertTrue(np.all(actual_idxs == expected_idxs),
-                            'expected {} got {}'.format(expected_idxs, actual_idxs))
+            self.assertTrue(
+                np.all(actual_idxs == expected_idxs),
+                f'expected {expected_idxs} got {actual_idxs}',
+            )
 
             expected_ids = np.empty((0,), dtype=np.int64)
-            self.assertTrue(np.all(expected_ids == actual_new_ids),
-                            'expected {} got {}'.format(expected_ids, actual_new_ids))
+            self.assertTrue(
+                np.all(expected_ids == actual_new_ids),
+                f'expected {expected_ids} got {actual_new_ids}',
+            )
         finally:
             sess.close()

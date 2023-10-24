@@ -20,10 +20,7 @@ def get_qualname(obj):
         return obj.__qualname__
 
     k = getattr(obj, '__func__', obj)  # get underlying function for PY2 (un)boundmethods
-    if k in _QUALNAMES:
-        return _QUALNAMES[k]
-
-    return obj.__qualname__  # raise a sane exception
+    return _QUALNAMES[k] if k in _QUALNAMES else obj.__qualname__
 
 
 def set_qualname(qualname):

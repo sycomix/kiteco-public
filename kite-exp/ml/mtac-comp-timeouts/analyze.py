@@ -18,7 +18,7 @@ percentiles = [25, 50, 75, 95]
 
 
 def percentiles_str(name: str, data: list) -> str:
-    return '{} percentiles ({}): {}'.format(name, percentiles, np.percentile(data, percentiles))
+    return f'{name} percentiles ({percentiles}): {np.percentile(data, percentiles)}'
 
 
 def time_parser():
@@ -73,18 +73,11 @@ class Metrics(NamedTuple):
             return 0
         jobs = 0
         for j in self.jobs:
-            if j.end < j.start:
-                # job was cancelled so just use the end time of
-                # the prefetcher
-                td = self.end - j.start
-            else:
-                td = j.end - j.start
+            td = self.end - j.start if j.end < j.start else j.end - j.start
             jobs += milliseconds(td)
         # we have two workers running in parallel so
         # if jobs > total we count it as 100 percent utilization
-        if jobs > total:
-            return 100.
-        return 100. * float(jobs) / float(total)
+        return 100. if jobs > total else 100. * float(jobs) / float(total)
 
 
 def read_data(fname: str, num=100) -> List[Metrics]:
@@ -99,12 +92,10 @@ def read_data(fname: str, num=100) -> List[Metrics]:
 
 def plot_hists(filename: str, label_fstr: str, entries: Dict[str, List[float]]):
     fig, axes = plt.subplots(nrows=len(entries), ncols=1)
-    idx = 0
-    for s, ps in entries.items():
+    for idx, (s, ps) in enumerate(entries.items()):
         ax = axes[idx]
         ax.hist(ps)
         ax.set_xlabel(label_fstr.format(s))
-        idx += 1
     plt.tight_layout()
     plt.savefig(filename)
 
@@ -118,10 +109,10 @@ def percent_utilization_by_source(data: List[Metrics]):
 
     plot_hists('utilization.png', '% utilization {}', source)
     for s, us in source.items():
-        print('stats for {}'.format(s))
-        print('  median utilization (% of 100): {}'.format(np.median(us)))
-        print('  mean utilization (% of 100): {}'.format(np.mean(us)))
-        print('  {}'.format(percentiles_str('utilization', us)))
+        print(f'stats for {s}')
+        print(f'  median utilization (% of 100): {np.median(us)}')
+        print(f'  mean utilization (% of 100): {np.mean(us)}')
+        print(f"  {percentiles_str('utilization', us)}")
 
 
 def lifetime_by_source(data: List[Metrics]):
@@ -134,10 +125,10 @@ def lifetime_by_source(data: List[Metrics]):
         source[d.source].append(seconds(d.end - d.start))
     plot_hists('lifetimes.png', 'lifetime in seconds {}', source)
     for s, ss in source.items():
-        print('stats for {}'.format(s))
-        print('  median lifetime (s): {}'.format(np.median(ss)))
-        print('  mean lifetime (s): {}'.format(np.mean(ss)))
-        print('  {}'.format(percentiles_str('lifetime', ss)))
+        print(f'stats for {s}')
+        print(f'  median lifetime (s): {np.median(ss)}')
+        print(f'  mean lifetime (s): {np.mean(ss)}')
+        print(f"  {percentiles_str('lifetime', ss)}")
 
 
 def source_stats(data: List[Metrics]):
@@ -148,10 +139,10 @@ def source_stats(data: List[Metrics]):
         source[d.source].append(len(d.jobs))
 
     for s, js in source.items():
-        print('stats for {}'.format(s))
-        print('  median num jobs: {}'.format(np.median(js)))
-        print('  mean num jobs: {}'.format(np.mean(js)))
-        print('  {}'.format(percentiles_str('num jobs', js)))
+        print(f'stats for {s}')
+        print(f'  median num jobs: {np.median(js)}')
+        print(f'  mean num jobs: {np.mean(js)}')
+        print(f"  {percentiles_str('num jobs', js)}")
 
 
 def completed_job_durations(data: List[Metrics]):
@@ -165,10 +156,10 @@ def completed_job_durations(data: List[Metrics]):
             source[d.source].append(milliseconds(j.end - j.start))
     plot_hists('completedjobdurations.png', 'job duration in ms {}', source)
     for s, js in source.items():
-        print('stats for {}'.format(s))
-        print('  median completed job duration (ms): {}'.format(np.median(js)))
-        print('  mean completed job duration (ms): {}'.format(np.mean(js)))
-        print('  {}'.format(percentiles_str('completed job duration', js)))
+        print(f'stats for {s}')
+        print(f'  median completed job duration (ms): {np.median(js)}')
+        print(f'  mean completed job duration (ms): {np.mean(js)}')
+        print(f"  {percentiles_str('completed job duration', js)}")
 
 
 def prefetcher_stats(data: List[Metrics]):
@@ -176,7 +167,7 @@ def prefetcher_stats(data: List[Metrics]):
     for d in data:
         source[d.source] = source.get(d.source, 0) + 1
     for s, n in source.items():
-        print('got {} {} prefetchers'.format(n, s))
+        print(f'got {n} {s} prefetchers')
 
 
 def main():

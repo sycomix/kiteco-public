@@ -78,9 +78,9 @@ def main():
             positions = embedding.fit_transform(affinity)
             positions = normalize(positions)
 
-        num_samples = 0
         anchor = np.random.randn(2) * 40.
         if len(anchors) > 0:
+            num_samples = 0
             while np.min(np.linalg.norm(anchor - anchors, axis=1)) < 5.:
                 anchor = np.random.randn(2) * 40.
                 num_samples += 1

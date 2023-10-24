@@ -137,17 +137,18 @@ class Sessionized(object):
             if not kw.has_key(k.name):
                 args.append((k, cls._make_storable(v)))
             else:
-                raise TypeError,\
-                      "got multiple arguments for '%s'" % k.name
+                raise (TypeError, f"got multiple arguments for '{k.name}'")
 
-        cols = dict((x.name, x) for x in cls.__table__.c)
-        for k, v in kw.iteritems():
-            if cols.has_key(k):
-                args.append((cols[k], cls._make_storable(v)))
+        cols = {x.name: x for x in cls.__table__.c}
+        args.extend(
+            (cols[k], cls._make_storable(v))
+            for k, v in kw.iteritems()
+            if cols.has_key(k)
+        )
         return args
 
     @classmethod
-    def _make_storable(self, val):
+    def _make_storable(cls, val):
         if isinstance(val, Account):
             return val._id
         elif isinstance(val, Thing):
@@ -177,9 +178,7 @@ class Sessionized(object):
             if not res:
                 raise NoResultFound
         except NoResultFound: 
-            raise NotFound, "%s with %s" % \
-                (cls.__name__,
-                 ",".join("%s=%s" % x for x in args))
+            raise (NotFound, f'{cls.__name__} with {",".join("%s=%s" % x for x in args)}')
         return res
 
     @classmethod
@@ -226,7 +225,7 @@ class CustomerID(Sessionized, Base):
     authorize_id  = Column(BigInteger)
 
     def __repr__(self):
-        return "<AuthNetID(%s)>" % self.authorize_id
+        return f"<AuthNetID({self.authorize_id})>"
 
     @classmethod
     def set(cls, user, _id):

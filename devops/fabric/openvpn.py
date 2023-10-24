@@ -12,11 +12,8 @@ _azure_vpn_ip = "XXXXXXX"
 
 @task
 def initialize():
-    host = "vpn.kite.com"
-    if env.host == _azure_vpn_ip:
-        host = "vpn-azure.kite.com"
-
-    opts = "--rm XXXXXXX/openvpn ovpn_genconfig -u udp://%s:XXXXXXX" % host
+    host = "vpn-azure.kite.com" if env.host == _azure_vpn_ip else "vpn.kite.com"
+    opts = f"--rm XXXXXXX/openvpn ovpn_genconfig -u udp://{host}:XXXXXXX"
     run(_cmd_prefix % opts)
     run(_cmd_prefix % "--rm -it XXXXXXX/openvpn ovpn_initpki")
 
@@ -31,21 +28,21 @@ def _get_id():
 @task
 def stop():
     container_id = _get_id()
-    run("sudo docker stop %s" % container_id)
+    run(f"sudo docker stop {container_id}")
 
 @task
 def restart():
     container_id = _get_id()
-    run("sudo docker restart %s" % container_id)
+    run(f"sudo docker restart {container_id}")
 
 @task
 def new_client(username):
-    opts = "--rm -it XXXXXXX/openvpn easyrsa build-client-full %s" % username
+    opts = f"--rm -it XXXXXXX/openvpn easyrsa build-client-full {username}"
     run(_cmd_prefix % opts)
 
 @task
 def revoke_client(username):
-    opts = "--rm -it XXXXXXX/openvpn easyrsa revoke %s" % username
+    opts = f"--rm -it XXXXXXX/openvpn easyrsa revoke {username}"
     run(_cmd_prefix % opts)
 
     opts = "--rm -it XXXXXXX/openvpn easyrsa gen-crl"
@@ -53,25 +50,21 @@ def revoke_client(username):
 
 @task
 def get_client_config(username):
-    provider = "aws"
-    if env.host == _azure_vpn_ip:
-        provider = "azure"
-
-    opts = "--rm XXXXXXX/openvpn ovpn_getclient %s > %s.ovpn" % (username, username)
+    provider = "azure" if env.host == _azure_vpn_ip else "aws"
+    opts = f"--rm XXXXXXX/openvpn ovpn_getclient {username} > {username}.ovpn"
     run(_cmd_prefix % opts)
 
     # Hack to make sure redirect-gateway line is gone.
-    run("sed -n '/redirect-gateway/!p' %s.ovpn > %s-kite-vpn-%s.ovpn" % (username, username, provider))
-    get(remote_path=("%s-kite-vpn-%s.ovpn" % (username, provider)))
+    run(
+        f"sed -n '/redirect-gateway/!p' {username}.ovpn > {username}-kite-vpn-{provider}.ovpn"
+    )
+    get(remote_path=f"{username}-kite-vpn-{provider}.ovpn")
     run("rm *.ovpn")
 
 @task
 def backup():
-    provider = "aws"
-    if env.host == _azure_vpn_ip:
-        provider = "azure"
-
+    provider = "azure" if env.host == _azure_vpn_ip else "aws"
     ts = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    run("sudo tar -cvzf openvpn-backup-%s-%s.tar.gz /srv/openvpn" % (provider, ts))
-    get(remote_path="openvpn-backup-%s-%s.tar.gz" % (provider, ts), local_path="backup/")
+    run(f"sudo tar -cvzf openvpn-backup-{provider}-{ts}.tar.gz /srv/openvpn")
+    get(remote_path=f"openvpn-backup-{provider}-{ts}.tar.gz", local_path="backup/")
     run("rm openvpn-backup-*.tar.gz")

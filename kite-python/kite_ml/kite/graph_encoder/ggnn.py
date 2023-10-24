@@ -52,14 +52,16 @@ class GGNN(object):
                     keys = [EdgeType.edge_key(edge_type, True), EdgeType.edge_key(edge_type, False)]
                 for key in keys:
                     weights = tf.get_variable(
-                        name='{}_weights'.format(key), shape=[self._node_dim, self._node_dim],
+                        name=f'{key}_weights',
+                        shape=[self._node_dim, self._node_dim],
                         initializer=tf.glorot_uniform_initializer(),
                     )
 
                     edge_attn = None
                     if self._config.use_edge_attention:
                         edge_attn = tf.Variable(
-                            np.ones([1], dtype=np.float32), name='{}_edge_attn_weight'.format(key),
+                            np.ones([1], dtype=np.float32),
+                            name=f'{key}_edge_attn_weight',
                         )
 
                     self._edges[key] = _Edge(
@@ -83,7 +85,7 @@ class GGNN(object):
         """
         state_shape: tf.Tensor = tf.shape(state, name='state_shape')
         for i, edges in enumerate(schedule):
-            with tf.name_scope('propagate_{}'.format(i)):
+            with tf.name_scope(f'propagate_{i}'):
                 # iterate over the edge keys in deterministic order
                 # and make sure we ALWAYS iterate over sources
                 # and targets in this order
@@ -111,7 +113,7 @@ class GGNN(object):
                     # need to get adjacency list based on the directed edge key
                     # since the adjacency list is also directed
                     adj_list = edges[edge_key]
-                    with tf.name_scope('edge_' + edge_key):
+                    with tf.name_scope(f'edge_{edge_key}'):
                         edge = self._edge(edge_key)
                         # [E_edge_i D]
                         source_state = tf.gather(state, adj_list[:, 0], name='source_state')
@@ -149,7 +151,9 @@ class GGNN(object):
                 elif self._config.message_pooling is PoolingOpt.MAX:
                     msg_pool_op = tf.segment_max
                 else:
-                    raise AssertionError('unrecognized message pooling opt {}'.format(self._config.message_pooling))
+                    raise AssertionError(
+                        f'unrecognized message pooling opt {self._config.message_pooling}'
+                    )
 
                 if self._config.use_edge_attention:
                     # [E_i]
@@ -189,7 +193,7 @@ class GGNN(object):
 
                 gru_name = 'gru'
                 if self._config.separate_grus_per_step:
-                    gru_name = 'gru_{}'.format(i)
+                    gru_name = f'gru_{i}'
 
                 gru = tf.contrib.rnn.GRUCell(
                     num_units=self._node_dim,
@@ -224,18 +228,15 @@ class GGNN(object):
                     name='new_state',
                 )
 
-                state = tf.identity(
-                    keep_state + new_target_states,
-                    name='updated_states_{}'.format(i),
-                )
-                # TODO: once we upgrade our version of TF we should use the tensor_scatter_nd_* ops here.
-                # state = tf.tensor_scatter_nd_update(
-                #     state, states_to_update, new_state, name='updated_states_{}'.format(i),
-                # )
+                state = tf.identity(keep_state + new_target_states, name=f'updated_states_{i}')
+                        # TODO: once we upgrade our version of TF we should use the tensor_scatter_nd_* ops here.
+                        # state = tf.tensor_scatter_nd_update(
+                        #     state, states_to_update, new_state, name='updated_states_{}'.format(i),
+                        # )
         return state
 
     def edge_set(self) -> List[EdgeType]:
-        return [t for t in self._config.edge_set]
+        return list(self._config.edge_set)
 
     def _edge(self, edge_key: str) -> _Edge:
         if self._config.tie_fwd_bkwd_weights:

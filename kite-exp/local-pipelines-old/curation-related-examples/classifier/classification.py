@@ -30,38 +30,33 @@ def main():
     parser.add_argument('--word2vec_model', help="path to the word2vec model", required=True)
     args = parser.parse_args()
 
-    # open output file
-    fout = open(args.fout, 'w')
+    with open(args.fout, 'w') as fout:
+        # set up the classifier and featurizer
+        with open(args.svm, 'rb') as fin:
+            clf = pickle.load(fin)
 
-    # set up the classifier and featurizer
-    with open(args.svm, 'rb') as fin:
-        clf = pickle.load(fin)
+        word2vec_model = gensim.models.Word2Vec.load(args.word2vec_model)
+        featurizer = relatedness.TitleRelatednessFeaturizer(word2vec_model)
 
-    word2vec_model = gensim.models.Word2Vec.load(args.word2vec_model)
-    featurizer = relatedness.TitleRelatednessFeaturizer(word2vec_model)
+        clf.featurizer = featurizer
 
-    clf.featurizer = featurizer
+        # read and process data
+        prev_package = ''
+        snippets = []
 
-    # read and process data
-    prev_package = ''
-    snippets = []
+        for package, buf in io.read(sys.stdin):
+            if package != prev_package != '':
+                relatedness_map = classify_snippet_pairs(clf, snippets)
+                save_to_json(fout, relatedness_map)
+                snippets = []
 
-    for package, buf in io.read(sys.stdin):
-        if package != prev_package and prev_package != '':
-            relatedness_map = classify_snippet_pairs(clf, snippets)
-            save_to_json(fout, relatedness_map)
-            snippets = []
+            snippet = json.loads(buf.decode('utf-8'))
+            if snippet['Title'] != '' and snippet['Prelude'] != '':
+                snippets.append(snippet)
+            prev_package = package
 
-        snippet = json.loads(buf.decode('utf-8'))
-        if snippet['Title'] != '' and snippet['Prelude'] != '':
-            snippets.append(snippet)
-        prev_package = package
-
-    relatedness_map = classify_snippet_pairs(clf, snippets)
-    save_to_json(fout, relatedness_map)
-
-    # close output file
-    fout.close()
+        relatedness_map = classify_snippet_pairs(clf, snippets)
+        save_to_json(fout, relatedness_map)
 
 def save_to_json(fout, relatedness_map):
     for s, related in relatedness_map.items():
@@ -89,7 +84,6 @@ def classify_snippet_pairs(clf, snippets):
     for i, s_i in enumerate(snippets):
         tag_i = s_i['SnippetID']
         for j, s_j in enumerate(snippets):
-            tag_j = s_j['SnippetID']
             if i < j:
                 line = json.dumps({
                         'CodeA': s_i['Code'],
@@ -102,6 +96,7 @@ def classify_snippet_pairs(clf, snippets):
                 neg, pos = clf.predict_proba(line)[0]
 
                 if pos >= RELATED_THRESHOLD:
+                    tag_j = s_j['SnippetID']
                     relatedness_map[tag_i].put((pos, tag_j))
                     relatedness_map[tag_j].put((pos, tag_i))
 

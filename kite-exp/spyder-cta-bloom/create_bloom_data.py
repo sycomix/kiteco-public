@@ -10,26 +10,21 @@ import sys
 from pybloom_pyqt import BloomFilter
 
 if len(sys.argv) != 3:
-    print("usage: {} <input-file> <output-file>".format(sys.argv[0]))
+    print(f"usage: {sys.argv[0]} <input-file> <output-file>")
     sys.exit(-1)
 input_path = sys.argv[1]
 output_path = sys.argv[2]
 
-f = open(input_path, 'r')
-lines = 0
-for line in f.readlines():
-    lines += 1
-
-print('bloom filter size: {}'.format(lines))
-f.seek(0)
-b = BloomFilter(capacity=lines)
-for line in f.readlines():
-    b.add(line.strip('\n\r '))
-
-f.close()
+with open(input_path, 'r') as f:
+    lines = sum(1 for _ in f)
+    print(f'bloom filter size: {lines}')
+    f.seek(0)
+    b = BloomFilter(capacity=lines)
+    for line in f:
+        b.add(line.strip('\n\r '))
 
 b.tofile(output_path)
-print('successfully saved bloom filter data to {}'.format(output_path))
+print(f'successfully saved bloom filter data to {output_path}')
 
 checks = {
     "json.load",
@@ -39,4 +34,4 @@ checks = {
     "pd.read_csv",
 }
 for check in checks:
-    print('selftest: {}? {}'.format(check, check in b))
+    print(f'selftest: {check}? {check in b}')

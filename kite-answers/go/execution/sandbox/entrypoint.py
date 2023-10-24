@@ -94,7 +94,7 @@ class FileInfo:
         for who in "USR", "GRP", "OTH":
             for what in "R", "W", "X":
                 bit = '-'
-                if mode & getattr(stat, "S_I" + what + who):
+                if mode & getattr(stat, f"S_I{what}{who}"):
                     bit = what.lower()
                 perms += bit
 
@@ -119,7 +119,7 @@ class FileInfo:
         sz = self._stat.st_size
 
         if sz < 1024:
-            return str(sz) + 'B'
+            return f'{str(sz)}B'
         for unit in ['K','M','G','T','P','E','Z']:
             sz /= 1024.0
             if abs(sz) < 1024.0:
@@ -138,20 +138,13 @@ class FileInfo:
         children = []
 
         if depth and self._is_dir:
-            for child in self.list:
-                children.append(child.tree(cols=cols, depth=depth-1))
-
-        data = []
-        for col in cols:
-            data.append(str(getattr(self, col)))
-
+            children.extend(child.tree(cols=cols, depth=depth-1) for child in self.list)
+        data = [str(getattr(self, col)) for col in cols]
         return ColumnTree(children=children, data=data)
 
 
 def remove_trailing_newline(s: str):
-    if s and s[-1] == '\n':
-        return s[:-1]
-    return s
+    return s[:-1] if s and s[-1] == '\n' else s
 
 
 class DisplayCodeState(enum.Enum):
@@ -172,7 +165,7 @@ class Runtime:
         return '{method} {url}\n{headers}\n\n{body}'.format(
             method=req.method,
             url=req.url,
-            headers='\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+            headers='\n'.join(f'{k}: {v}' for k, v in req.headers.items()),
             body=req.body or '',
         ).strip()
 
@@ -181,7 +174,7 @@ class Runtime:
         return 'HTTP {status_code} {status_code_text}\n{headers}\n\n{body}'.format(
             status_code=res.status_code,
             status_code_text=http.client.responses.get(res.status_code, ''),
-            headers='\n'.join('{}: {}'.format(k, v) for k, v in res.headers.items()),
+            headers='\n'.join(f'{k}: {v}' for k, v in res.headers.items()),
             body=res.content.decode('utf-8') or '',
         ).strip()
 
@@ -243,14 +236,14 @@ class Runtime:
         if  self.__display_code == DisplayCodeState.HIDE:
             return
         for code_line in src.split('\n'):
-            if code_line.lstrip().startswith(self.__NAME + '.'):
+            if code_line.lstrip().startswith(f'{self.__NAME}.'):
                 continue
             if self.__display_code == DisplayCodeState.DISPLAY_NONEMPTY:
-                if not code_line.strip():
-                    continue
-                else:
+                if code_line.strip():
                     self.__display_code = DisplayCodeState.DISPLAY
 
+                else:
+                    continue
             self.__blocks.append({'code_line': code_line.rstrip()})
 
     def _collect_blocks(self):
@@ -341,7 +334,7 @@ class Runtime:
 
         if title is None:
             title = path
-        self.display(title, 'data:{};base64,{}'.format(typ, data.decode('utf-8')), type='image')
+        self.display(title, f"data:{typ};base64,{data.decode('utf-8')}", type='image')
 
     def display_file(self, path: str, limit: int = 10000, title: Optional[str] = None):
         with open(path) as f:
