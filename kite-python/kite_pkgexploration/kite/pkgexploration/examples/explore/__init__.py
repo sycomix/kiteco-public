@@ -10,9 +10,8 @@ foo = Foo()
 bar = Bar()
 
 
+
+
 class Test(object):
-    if _PY3:
-        foo = Foo.foo
-    else:
-        foo = Foo.foo.__func__  # broken on PY3
+    foo = Foo.foo if _PY3 else Foo.foo.__func__
     large = LARGE

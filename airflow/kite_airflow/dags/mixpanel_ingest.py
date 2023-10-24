@@ -61,9 +61,10 @@ def copy_profile_deltas(task_instance, execution_date, prev_execution_date_succe
     with gzip.GzipFile(fileobj=gz_file, mode="w") as f:
         start_date = chunks.pop(0)
         for chunk in chunks:
-            filters = []
-            for cmp, dt in [['>=', start_date], ['<', chunk]]:
-                filters.append('user.time {} {}'.format(cmp, 1000 * int(time.mktime(dt.astimezone(pacific).timetuple()))))
+            filters = [
+                f'user.time {cmp} {1000 * int(time.mktime(dt.astimezone(pacific).timetuple()))}'
+                for cmp, dt in [['>=', start_date], ['<', chunk]]
+            ]
             start_date = chunk
             print(filters)
             script = 'function main() {{ return People().filter(function(user) {{ return {}; }})}}'.format(' && '.join(filters))
@@ -94,9 +95,7 @@ def copy_profile_deltas(task_instance, execution_date, prev_execution_date_succe
                 f.write(b'\n')
 
     s3 = S3Hook('aws_us_east_1')
-    key = 'mixpanel/people/raw/year={}/month={}/day={}/deltas.json.gz'.format(
-      execution_date.year, execution_date.month, execution_date.day
-    )
+    key = f'mixpanel/people/raw/year={execution_date.year}/month={execution_date.month}/day={execution_date.day}/deltas.json.gz'
     s3.load_bytes(gz_file.getvalue(), key, 'kite-metrics')
 
 
@@ -143,26 +142,29 @@ ddl_dag = DAG(
 )
 
 for table_name, s3_prefix in {'mixpanel_people_raw': 'mixpanel/people/raw', 'mixpanel_people': 'mixpanel/people/rollups'}.items():
-    AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='drop_{}'.format(table_name),
-        query='DROP TABLE {{params.table_name}}',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=ddl_dag,
-        params={'table_name': table_name},
-    ) >> AWSAthenaOperator(
-        aws_conn_id='aws_us_east_1',
-        task_id='create_{}'.format(table_name),
-        query='athena/tables/mixpanel_people.tmpl.sql',
-        output_location='s3://kite-metrics-test/athena-results/ddl',
-        database='kite_metrics',
-        dag=ddl_dag,
-        params={
-            'schema': people_schema,
-            'table_name': table_name,
-            's3_prefix': s3_prefix,
-            'partitioned': table_name == 'mixpanel_people_raw',
-            'json': table_name == 'mixpanel_people_raw',
-        }
+    (
+        AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'drop_{table_name}',
+            query='DROP TABLE {{params.table_name}}',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=ddl_dag,
+            params={'table_name': table_name},
+        )
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id=f'create_{table_name}',
+            query='athena/tables/mixpanel_people.tmpl.sql',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=ddl_dag,
+            params={
+                'schema': people_schema,
+                'table_name': table_name,
+                's3_prefix': s3_prefix,
+                'partitioned': table_name == 'mixpanel_people_raw',
+                'json': table_name == 'mixpanel_people_raw',
+            },
+        )
     )

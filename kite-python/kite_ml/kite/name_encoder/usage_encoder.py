@@ -117,11 +117,11 @@ class Encoder(object):
         """
 
         if name:
-            name = name+'_names'
+            name = f'{name}_names'
         names = self.names(idxs, name=name)
 
         if name:
-            name = name+'_types'
+            name = f'{name}_types'
 
         types = self.types(idxs, name=name)
 

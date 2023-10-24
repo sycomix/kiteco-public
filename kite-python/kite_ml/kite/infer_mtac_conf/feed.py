@@ -40,7 +40,7 @@ class Feed(NamedTuple):
                     float(comp_features.none_ratio),
                     float(comp_features.comp_types_empty)]
         scope_vec = encode_enum(comp_features.scenario)
-        comp_vec = comp_vec+scope_vec
+        comp_vec += scope_vec
         return comp_vec
 
     @staticmethod

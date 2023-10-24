@@ -42,22 +42,23 @@ class FileDataFeeder(DataFeeder):
             self._mark_done()
 
         self._filename = self._choose_next_file()
-        logging.info('starting to read {}'.format(self._filename))
+        logging.info(f'starting to read {self._filename}')
         path = os.path.join(self._in_dir, self._filename)
         self._file = open(path, 'rb')
         self._count = 0
 
     def _mark_done(self):
-        logging.info('finished reading {}, got {} samples'.format(
-            self._filename, self._count))
+        logging.info(f'finished reading {self._filename}, got {self._count} samples')
 
         self._already_read.add(self._filename)
 
     def _choose_next_file(self) -> str:
         while True:
-            candidates = [f for f in os.listdir(self._in_dir)
-                          if f.endswith(self._ext) and f not in self._already_read]
-            if candidates:
+            if candidates := [
+                f
+                for f in os.listdir(self._in_dir)
+                if f.endswith(self._ext) and f not in self._already_read
+            ]:
                 candidates.sort()  # always prefer the earliest file
                 return candidates[0]
             # No new files available, so wait a bit and try again

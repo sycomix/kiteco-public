@@ -36,7 +36,7 @@ def _search_mro(cls, attr):
     for concrete_cls in cls.__mro__:
         if attr in concrete_cls.__dict__:
             return concrete_cls
-    raise Exception("could not find attribute {} in the MRO of {}".format(attr, cls))
+    raise Exception(f"could not find attribute {attr} in the MRO of {cls}")
 
 
 def get_kind(x):
@@ -79,9 +79,7 @@ def boundmethod_get_classattr(bm, name_hints=()):
         else:
             return False
 
-        if candidate_fn is bm.__func__:
-            return True
-        return False
+        return candidate_fn is bm.__func__
 
     # search for an unboundmethod on the class whose function matches the boundmethod's function
     name_hints = (bm.__name__,) + name_hints
@@ -105,20 +103,15 @@ def approx_canonical_name(obj):
     try:
         attr = str(obj)
         if getattr(builtins, attr) is obj:
-            return "{}.{}".format(builtins.__name__, attr)
+            return f"{builtins.__name__}.{attr}"
     except Exception:
         pass
 
     # handle NoneType
     if type(None) is obj:
-        if _PY3:
-            # there's no good fullname in Py3, so use the Py2 one
-            # eventually, we should use "builtins.None.__class__"
-            return "types.NoneType"
-        else:
-            # otherwise, we'd return __builtin__.NoneType, which is not valid
-            return "types.NoneType"
-
+        # there's no good fullname in Py3, so use the Py2 one
+        # eventually, we should use "builtins.None.__class__"
+        return "types.NoneType"
     # obj is a module?
     if inspect.ismodule(obj):
         return obj.__name__
@@ -131,7 +124,7 @@ def approx_canonical_name(obj):
         underlying = get_decorated(obj)
         if underlying is None:
             underlying = obj
-        return mod.__name__ + '.' + get_qualname(underlying)
+        return f'{mod.__name__}.{get_qualname(underlying)}'
     except Exception:
         pass
 
@@ -139,14 +132,14 @@ def approx_canonical_name(obj):
     # obj is a boundmethod?
     try:
         cls, attr = boundmethod_get_classattr(obj)
-        return approx_canonical_name(cls) + '.' + attr
+        return f'{approx_canonical_name(cls)}.{attr}'
     except Exception:
         pass
 
     # obj is an unboundmethod (py2)? Try this only after trying the boundmethod case!
     try:
         attr = _attr_search(obj.im_class, lambda candidate: candidate is obj, name_hints=(obj.__name__,))
-        return approx_canonical_name(obj.im_class) + '.' + attr
+        return f'{approx_canonical_name(obj.im_class)}.{attr}'
     except Exception:
         pass
 
@@ -156,13 +149,13 @@ def approx_canonical_name(obj):
         if owner is not obj and not inspect.ismemberdescriptor(owner):  # TODO why do we need these checks?
             name_hints = (getattr(obj, '__name__', None),)
             attr = _attr_search(owner, lambda candidate: candidate is obj, name_hints=name_hints)
-            return approx_canonical_name(owner) + '.' + attr
+            return f'{approx_canonical_name(owner)}.{attr}'
     except Exception:
         pass
 
     # obj has a __module__ and __name__?
     try:
-        return obj.__module__ + '.' + obj.__name__
+        return f'{obj.__module__}.{obj.__name__}'
     except Exception:
         pass
 
@@ -242,10 +235,7 @@ def get_doc(x):
     Get the documentation for x, or empty string if there is no documentation.
     """
     s = inspect.getdoc(x)
-    if isinstance(s, basestring):
-        return s
-    else:
-        return ""
+    return s if isinstance(s, basestring) else ""
 
 
 def get_source_info(obj):

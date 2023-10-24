@@ -120,8 +120,8 @@ def main():
 
 	# Report results
 	print("\nFunctions:")
-	for func in usages_by_func.keys():
-		print("  "+func)
+	for func in usages_by_func:
+		print(f"  {func}")
 
 	print("\nTypes:")
 	typelearning.print_attrs_by_type(attrs_by_type)

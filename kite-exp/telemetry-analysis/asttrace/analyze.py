@@ -39,7 +39,7 @@ class Stats:
         print('end of node:', self.end_of_node)
         print('middle of node:', sum(self.type_counts.values()))
         for ty, cnt in self.type_counts.most_common(10):
-            print('  {}: {}'.format(ty, cnt))
+            print(f'  {ty}: {cnt}')
 
 
 def main():

@@ -27,8 +27,9 @@ class Feed(NamedTuple):
         )
 
     def assert_valid(self):
-        assert len(self.prediction_nodes) == len(self.labels), \
-            'num pred nodes {} != num labels {}'.format(len(self.prediction_nodes), len(self.labels))
+        assert len(self.prediction_nodes) == len(
+            self.labels
+        ), f'num pred nodes {len(self.prediction_nodes)} != num labels {len(self.labels)}'
 
         self.decoder_targets.assert_valid(self.batch_size())
 

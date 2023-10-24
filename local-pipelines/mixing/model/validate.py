@@ -56,7 +56,7 @@ def count(data: pd.DataFrame, k: int, col: str) -> pd.DataFrame:
 
 
 def write(path: str, **kwargs: pd.DataFrame):
-    labels = (label.replace("_", " ").upper() for label in kwargs.keys())
+    labels = (label.replace("_", " ").upper() for label in kwargs)
     tables = (table(data) for data in kwargs.values())
     output = "\n\n".join(f"{label}\n{table}" for label, table in zip(labels, tables))
     with open(path, "w") as f:

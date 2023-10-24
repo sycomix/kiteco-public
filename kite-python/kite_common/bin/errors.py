@@ -17,8 +17,8 @@ def main():
     output = errors.results_to_string(extracted_errors)
 
     output_dir = args.output_dir[:-1] if args.output_dir[-1] == '/' else args.output_dir
-    
-    with open(output_dir + "/output", "w+") as f:
+
+    with open(f"{output_dir}/output", "w+") as f:
         f.write(output)
 
 if __name__ == "__main__":

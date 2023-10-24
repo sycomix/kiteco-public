@@ -32,10 +32,7 @@ def is_literal(node):
         if node.id in ('True', 'False', 'None'):
             return True
 
-    if type(node) is ast.Lambda:
-        return True
-
-    return False
+    return type(node) is ast.Lambda
 
 
 def literal_value(node):
@@ -48,10 +45,7 @@ def literal_value(node):
     if (isinstance(node, ast.Name) and
             node.id in ('True', 'False', 'None')):
         return node.id
-    if isinstance(node, ast.Lambda):
-        return node_to_code(node)
-
-    return ''
+    return node_to_code(node) if isinstance(node, ast.Lambda) else ''
 
 
 def _process_lambda(node):
@@ -69,20 +63,14 @@ def node_to_type(node):
             for t, name in NUMBER_TYPES.items():
                 if isinstance(node.n, t):
                     return name
-            return LITERAL_NODES[type(node)]
-        else:
-            return LITERAL_NODES[type(node)]
-
+        return LITERAL_NODES[type(node)]
     if type(node) == ast.Name:
-        if (node.id == 'True' or node.id == 'False'):
+        if node.id in ['True', 'False']:
             return "__builtin__.bool"
         elif node.id == 'None':
             return "__builtin__.None"
 
-    if type(node) == ast.Lambda:
-        return "LambdaType"
-
-    return "unknown"
+    return "LambdaType" if type(node) == ast.Lambda else "unknown"
 
 
 class TypeScope(object):
@@ -91,8 +79,8 @@ class TypeScope(object):
 
     def __getitem__(self, key):
         if key in self:
-            return "types.%s" % key
-        raise KeyError("%s is not a type" % key)
+            return f"types.{key}"
+        raise KeyError(f"{key} is not a type")
 
 
 class BuiltinScope(object):
@@ -101,8 +89,8 @@ class BuiltinScope(object):
 
     def __getitem__(self, key):
         if key in self:
-            return "__builtin__.%s" % key
-        raise KeyError("%s not a builtin" % key)
+            return f"__builtin__.{key}"
+        raise KeyError(f"{key} not a builtin")
 
 
 class Context(object):
@@ -132,18 +120,18 @@ class Context(object):
             scopes.append(('class', self.class_scope))
         scopes.reverse()
 
-        for scopeName, scope in scopes:
-            if self._check_in(name, scope):
-                return scopeName, self._resolve_in(name, scope)
-
-        return None, None
+        return next(
+            (
+                (scopeName, self._resolve_in(name, scope))
+                for scopeName, scope in scopes
+                if self._check_in(name, scope)
+            ),
+            (None, None),
+        )
 
     def in_class_scope(self, node):
         name = self._get_name(node)
-        if not name:
-            return False
-
-        return self._check_in(name, self.class_scope)
+        return False if not name else self._check_in(name, self.class_scope)
 
     @contextmanager
     def function_context(self):
@@ -189,7 +177,7 @@ class Context(object):
             return
 
         for im in node.names:
-            full_import = node.module + '.' + im.name
+            full_import = f'{node.module}.{im.name}'
             if im.asname is None:
                 self.imports[im.name] = full_import
             else:

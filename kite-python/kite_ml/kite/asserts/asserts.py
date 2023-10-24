@@ -25,23 +25,24 @@ class FieldValidator(object):
         assert isinstance(field_name, str)
         assert isinstance(instance_of, type)
 
-        assert field_name in self.d, 'missing {}'.format(self._fqn(field_name))
+        assert field_name in self.d, f'missing {self._fqn(field_name)}'
         val = self.d[field_name]
 
         assert isinstance(val, instance_of), \
-            '{0}: expected type {1} but got type {2}'.format(self._fqn(field_name), instance_of, type(val))
+                '{0}: expected type {1} but got type {2}'.format(self._fqn(field_name), instance_of, type(val))
 
         if asserts is not None:
             asserts(self._fqn(field_name), val)
 
-        if build is not None:
-            return build(val)
-        return val
+        return build(val) if build is not None else val
 
     def get_float(self, field_name: str, asserts: Optional[Assertion]=None) -> float:
         val = self.get(field_name, object, asserts=asserts)
-        assert isinstance(val, int) or isinstance(val, float), \
-            '{0}: expected int/float but got type {1}'.format(self._fqn(field_name), type(val))
+        assert isinstance(
+            val, (int, float)
+        ), '{0}: expected int/float but got type {1}'.format(
+            self._fqn(field_name), type(val)
+        )
         return float(val)
 
     def get_enum(self, field_name: str, enum_class: EnumMeta):
@@ -99,7 +100,7 @@ class FieldValidator(object):
         return ".".join([self.namespace, field_name])
 
     def _ind_fqn(self, field_name: str, k: Any) -> str:
-        return "{}.{}[{}]".format(self.namespace, field_name, k)
+        return f"{self.namespace}.{field_name}[{k}]"
 
 
 class Validator(object):
@@ -223,38 +224,45 @@ class Assert(object):
 
             val = d[key]
 
-            fqn = ns + '.' + key
+            fqn = f'{ns}.{key}'
             assert isinstance(val, validator.instance_of), \
-                'expected type {0} got type {1} for {2}'.format(str(validator.instance_of), type(val), fqn)
+                    'expected type {0} got type {1} for {2}'.format(str(validator.instance_of), type(val), fqn)
             if validator.asserts is not None:
                 validator.asserts(fqn, val)
 
 
 def assert_enum(enum_subtype: EnumMeta, inst: Any):
     assert isinstance(enum_subtype, EnumMeta)
-    assert inst in list(enum_subtype), 'expected {} in {}'.format(inst, list(enum_subtype))
+    assert inst in list(enum_subtype), f'expected {inst} in {list(enum_subtype)}'
 
 
 def assert_valid_segmented_dataset(batch_size: int, max_elem: int, elems: List[int], segment_ids: List[int]):
-    assert len(elems) == len(segment_ids), \
-        'num segmented elems {} != num segment ids {}'.format(len(elems), len(segment_ids))
+    assert len(elems) == len(
+        segment_ids
+    ), f'num segmented elems {len(elems)} != num segment ids {len(segment_ids)}'
 
     seen = set()
     for i in range(len(elems)):
         if max_elem > -1:
-            assert 0 <= elems[i] < max_elem, 'elem {} at {} not in [0,...,{}]'.format(elems[i], i, max_elem)
+            assert (
+                0 <= elems[i] < max_elem
+            ), f'elem {elems[i]} at {i} not in [0,...,{max_elem}]'
         sid = segment_ids[i]
         if batch_size > -1:
-            assert 0 <= sid < batch_size, 'segment id {} at  {} not in [0,...,{}]'.format(sid, i, batch_size)
+            assert (
+                0 <= sid < batch_size
+            ), f'segment id {sid} at  {i} not in [0,...,{batch_size}]'
         if i < len(elems)-1:
             sidn = segment_ids[i+1]
-            assert sid <= sidn, \
-                'segment ids must be in ascending order {} at {} is larger than {} at {}'.format(sid, i, sidn, i+1)
+            assert (
+                sid <= sidn
+            ), f'segment ids must be in ascending order {sid} at {i} is larger than {sidn} at {i + 1}'
         seen.add(sid)
 
     if batch_size > -1:
-        assert len(seen) == batch_size, \
-            'expected atleast one sample per batch {} only got {}'.format(batch_size, len(seen))
+        assert (
+            len(seen) == batch_size
+        ), f'expected atleast one sample per batch {batch_size} only got {len(seen)}'
 
 
 def assert_valid_segment_ids(batch_size: int, segment_ids: List[int]):
@@ -262,13 +270,17 @@ def assert_valid_segment_ids(batch_size: int, segment_ids: List[int]):
     for i in range(len(segment_ids)):
         sid = segment_ids[i]
         if batch_size > -1:
-            assert 0 <= sid < batch_size, 'segment id {} at  {} not in [0,...,{}]'.format(sid, i, batch_size)
+            assert (
+                0 <= sid < batch_size
+            ), f'segment id {sid} at  {i} not in [0,...,{batch_size}]'
         if i < len(segment_ids)-1:
             sidn = segment_ids[i+1]
-            assert sid <= sidn, \
-                'segment ids must be in ascending order {} at {} is larger than {} at {}'.format(sid, i, sidn, i+1)
+            assert (
+                sid <= sidn
+            ), f'segment ids must be in ascending order {sid} at {i} is larger than {sidn} at {i + 1}'
         seen.add(sid)
 
     if batch_size > -1:
-        assert len(seen) == batch_size, \
-            'expected atleast one sample per batch{} only got {}'.format(batch_size, len(seen))
+        assert (
+            len(seen) == batch_size
+        ), f'expected atleast one sample per batch{batch_size} only got {len(seen)}'

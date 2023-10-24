@@ -53,9 +53,7 @@ def get_decorated(obj, recursive=True):
         if not recursive:
             break
 
-    if cur is obj:  # the loop found no decorated objects
-        return None
-    return cur
+    return None if cur is obj else cur
 
 
 class RuntimeTransformer(import_hook.RuntimeTransformer):

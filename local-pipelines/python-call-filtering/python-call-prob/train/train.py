@@ -31,8 +31,10 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--traindata', type=str, default='data/traindata.json')
-    parser.add_argument('--out_dir', type=str, default='out/{}/model'.format(ts))
-    parser.add_argument('--frozen_model', type=str, default='out/{}/mix_model.frozen.pb'.format(ts))
+    parser.add_argument('--out_dir', type=str, default=f'out/{ts}/model')
+    parser.add_argument(
+        '--frozen_model', type=str, default=f'out/{ts}/mix_model.frozen.pb'
+    )
 
     args = parser.parse_args()
 

@@ -9,4 +9,4 @@ PREFIX = 'PUPPET_FACT_'
 for k, v in os.environ.items():
     if not k.startswith(PREFIX):
         continue
-    print('{}={}'.format(k[len(PREFIX):],v))
+    print(f'{k[len(PREFIX):]}={v}')

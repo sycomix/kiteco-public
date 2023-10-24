@@ -24,7 +24,7 @@ async def load_mixpanel(iterable):
         name = line['name']
 
         # Customer.io requires user ID's to be non-empty ASCII
-        user_id_err = not user_id or not all(ord(c) < 128 for c in user_id)
+        user_id_err = not user_id or any(ord(c) >= 128 for c in user_id)
 
         try:
             if line['name'] in CIO_EVENTS and not user_id_err:

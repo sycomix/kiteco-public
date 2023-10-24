@@ -44,7 +44,7 @@ def train_pro_model(users: pd.DataFrame) -> ProModel:
         'pro': set(surveyed[surveyed.last_surveyed_profession.isin(pro_professions)].index),
         'non-pro': set(surveyed[surveyed.last_surveyed_profession.isin(nonpro_professions)].index),
     }
-    logging.debug("user split: {}".format({k: len(v) for k, v in user_split.items()}))
+    logging.debug(f"user split: {{k: len(v) for k, v in user_split.items()}}")
 
     # balance the pro and non-pro populations to keep bias from creeping into the classifier
     balanced = balance_populations(user_split)

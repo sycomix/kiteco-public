@@ -88,8 +88,9 @@ class RawSample(NamedTuple):
         features: RawFeatures = v.get('features', dict, build=RawFeatures.from_json)
         label = v.get('label', int)
 
-        assert -1 <= label < len(features.comp), \
-            "label ({}) out of range of comp feature length ({})".format(label, len(features.comp))
+        assert (
+            -1 <= label < len(features.comp)
+        ), f"label ({label}) out of range of comp feature length ({len(features.comp)})"
 
         return RawSample(
             features=features,

@@ -163,7 +163,7 @@ class Histogram:
             f"- Number of issues: {self.num_issues}",
             f"- Normalized area under CDF: {round(area_under_cdf, 3)}",
         ])
-        chart = f"![](histogram.png)"
+        chart = "![](histogram.png)"
         table = "\n".join([
             "|Ranking|Weighted Frequency|Percent|Cumulative|",
             "|-|-|-|-|",

@@ -32,7 +32,7 @@ def count_processed_line():
     global processed_line_count
     processed_line_count += 1
     if processed_line_count % 1000000 == 0:
-        print(str(processed_line_count), file=sys.stderr)
+        print(processed_line_count, file=sys.stderr)
 
 
 def fast_iter(context, func, post_type, tags=None):

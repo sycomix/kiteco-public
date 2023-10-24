@@ -13,8 +13,11 @@ async def transform_elastic_kite_status_1d(it):
     async for rec in it:
         if rec['event'] != 'kite_status':
             continue
-        rec_id = hashlib.md5('{}::{}'.format(rec.get('userId', ''), rec['end_time'].strftime('%Y/%m/%d'))
-                             .encode('utf8')).hexdigest()
+        rec_id = hashlib.md5(
+            f"{rec.get('userId', '')}::{rec['end_time'].strftime('%Y/%m/%d')}".encode(
+                'utf8'
+            )
+        ).hexdigest()
         rec['timestamp'] = rec['end_time']
         yield {'_index': 'kite_status_daily', '_id': rec_id, '_source': rec}
 
@@ -23,7 +26,7 @@ async def transform_elastic_kite_status_1d(it):
 def transform_mixpanel_kite_status_1d(rec):
     rec = rec.copy()
     rec['user_id'] = rec.pop('userId', '')
-    rec['_group'] = 'firehose/kite_status/{}/'.format(rec['end_time'].strftime('%Y/%m/%d'))
+    rec['_group'] = f"firehose/kite_status/{rec['end_time'].strftime('%Y/%m/%d')}/"
     rec['time'] = int(rec['end_time'].timestamp())
     rec['start_time'] = int(rec['start_time'].timestamp())
     rec['end_time'] = int(rec['end_time'].timestamp())
@@ -63,13 +66,16 @@ async def transform_elastic_kite_status(it):
             continue
 
         index_active_str = 'active'
-        if sum(doc['properties'].get('{}_events'.format(lang), 0) for lang in languages) == 0:
+        if (
+            sum(
+                doc['properties'].get(f'{lang}_events', 0)
+                for lang in languages
+            )
+            == 0
+        ):
             continue
 
-        index_name = '{}_{}_{}'.format(
-            INDEX_PREFIX,
-            index_active_str,
-            index_date_suffix)
+        index_name = f'{INDEX_PREFIX}_{index_active_str}_{index_date_suffix}'
 
         scrub(doc)
         for field in ['originalTimestamp']:

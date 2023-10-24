@@ -91,10 +91,8 @@ class GraphEncoder(object):
             return
 
         with tf.name_scope('propagate'):
-            schedule = []
-            for _ in range(self._max_hops):
-                schedule.append(self._placeholders.edges.edges)
+            schedule = [self._placeholders.edges.edges for _ in range(self._max_hops)]
             # [num nodes, total embed depth]
             final_state = self._ggnn.propagate(self._node_embedded, schedule)
-        
+
         self._node_state = tf.identity(final_state, name='final_node_states')

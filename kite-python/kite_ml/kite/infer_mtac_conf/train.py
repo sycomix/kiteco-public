@@ -18,15 +18,18 @@ def train_logistic_model(sess: tf.Session, model: Model, train_feeder: FileFeede
     train_data = _get_dataset(train_feeder)
     val_data = _get_dataset(val_feeder)
 
-    logging.info("read {} train records and {} validation records".format(
-        train_data.num_records(), val_data.num_records()))
+    logging.info(
+        f"read {train_data.num_records()} train records and {val_data.num_records()} validation records"
+    )
 
     clf: LogisticRegression = LogisticRegression(solver='lbfgs').fit(train_data.features, train_data.labels)
-    logging.info("sklearn classifier intercept: {}, weights: {}".format(clf.intercept_, clf.coef_))
+    logging.info(
+        f"sklearn classifier intercept: {clf.intercept_}, weights: {clf.coef_}"
+    )
 
     val_predictions = clf.predict_proba(val_data.features)[:, 1]
     auc = roc_auc_score(val_data.labels, val_predictions)
-    logging.info("AUC: {}".format(auc))
+    logging.info(f"AUC: {auc}")
 
     weights = _get_classifier_weights(clf)
     model.set_weights(sess, weights)

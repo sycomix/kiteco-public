@@ -56,8 +56,8 @@ def main():
 			pos = line.find('.go:')
 			if pos != -1:
 				pos = line.find(' ', pos)
-				if pos != -1:
-					line = line[pos+1:]
+			if pos != -1:
+				line = line[pos+1:]
 		if 5 <= len(line) <= 200:
 			errorlines.append(line)
 

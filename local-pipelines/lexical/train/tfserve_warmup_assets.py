@@ -37,7 +37,7 @@ def main():
         log = prediction_log_pb2.PredictionLog(
             predict_log=prediction_log_pb2.PredictLog(request=req))
 
-        for r in range(NUM_RECORDS):
+        for _ in range(NUM_RECORDS):
             context = list(np.random.choice(range(config.n_vocab-1), context_size)+1) # range(n)-1, +1 to avoid 0 token, which is SOF
             req.inputs['context'].CopyFrom(tf.compat.v1.make_tensor_proto([context], tf.int64))
             log = prediction_log_pb2.PredictionLog(

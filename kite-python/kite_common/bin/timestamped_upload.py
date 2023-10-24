@@ -40,7 +40,7 @@ def main():
     bucket = conn.get_bucket(dest_bucket)
     for fn, relpath in files:
         clean_fn = os.path.join(dest_path, ts, relpath)
-        print("uploading to s3://%s/%s" % (dest_bucket, clean_fn))
+        print(f"uploading to s3://{dest_bucket}/{clean_fn}")
         key = boto.s3.key.Key(bucket)
         key.key = clean_fn
         key.set_contents_from_filename(fn)

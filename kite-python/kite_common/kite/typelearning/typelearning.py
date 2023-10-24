@@ -82,10 +82,7 @@ def lastpart(x):
 	"foo" -> "foo"
 	"""
 	pos = x.rfind(".")
-	if pos == -1:
-		return x
-	else:
-		return x[pos+1:]
+	return x if pos == -1 else x[pos+1:]
 
 
 def logdistr_str(distr):
@@ -268,9 +265,9 @@ def load_usages(path, pkgs):
 			name = val['Identifier']
 			assert key == name
 
-			if not any(name.startswith(pkg+".") for pkg in pkgs):
+			if not any(name.startswith(f"{pkg}.") for pkg in pkgs):
 				continue
-			
+
 			attrs = [x["Identifier"] for x in val["Attributes"]]
 			usages_by_func[name]["var%08d" % num_vars] = attrs
 			num_vars += 1
@@ -288,7 +285,7 @@ def load_import_tree(path, pkgs=None):
 			name, cl, members, aliases = obj['canonical_name'], obj['classification'], obj['members'], obj['names']
 			func_aliases[name] = name
 
-			if pkgs is not None and not any(name.startswith(pkg+".") for pkg in pkgs):
+			if pkgs is not None and not any(name.startswith(f"{pkg}.") for pkg in pkgs):
 				continue
 
 			if cl == 'function':

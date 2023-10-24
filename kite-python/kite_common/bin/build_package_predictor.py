@@ -59,7 +59,7 @@ def main():
     elif args.model == 'logit':
         model = logit.LogisticRegressionClassifier(featurizer)
     else:
-        logger.error('%s is not supported' % args.model)
+        logger.error(f'{args.model} is not supported')
         exit(1)
 
     # load training data

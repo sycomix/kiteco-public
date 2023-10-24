@@ -81,9 +81,7 @@ def read():
 def group(row):
     if row["converted"]:
         return 2
-    if row["trial_or_converted"]:
-        return 1
-    return 0
+    return 1 if row["trial_or_converted"] else 0
 
 
 def box_plot(data, col, out):

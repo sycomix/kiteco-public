@@ -20,9 +20,7 @@ async def slack_event(request):
     if "challenge" in event.keys():
         return web.Response(text=event["challenge"])
 
-    # check if the event is relevant
-    e = relevant_event(event)
-    if e:
+    if e := relevant_event(event):
         # catch all exceptions so that we don't return non-200s
         try:
             await handle_event(request.app, e)
@@ -61,7 +59,7 @@ async def handle_event(app, event):
 
     # if this is not a DM, only listen to messages that contain the bot name tag
     if not isDM(channel):
-        bot_tag = "<@{}>".format(Bot.bot_slack_id)
+        bot_tag = f"<@{Bot.bot_slack_id}>"
         if bot_tag in text:
             text = strip_bot_tag(text, bot_tag)
         else:

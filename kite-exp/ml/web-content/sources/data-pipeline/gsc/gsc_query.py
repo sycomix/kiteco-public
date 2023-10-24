@@ -42,12 +42,12 @@ def list_pages(start_date, end_date, output_file, service):
                 break
     except:
         e = sys.exc_info()[0]
-        print("Error while fetching pages info: {}".format(e))
+        print(f"Error while fetching pages info: {e}")
 
     with open(output_file, 'w') as outfile:
         json.dump(pages, outfile)
 
-    print("{} pages received, list written to {}".format(len(pages), output_file))
+    print(f"{len(pages)} pages received, list written to {output_file}")
 
 
 def list_queries(target_page, start_date, end_date, service, output_file):
@@ -77,20 +77,23 @@ def list_queries(target_page, start_date, end_date, service, output_file):
             i += 1
 
             response = execute_request(service, KITE_ADDR, request)
-            if response is not None and 'rows' in response and len(response['rows']) > 0:
-                queries.extend(response["rows"])
-                if len(response["rows"]) < 25000:
-                    break
-            else:
+            if (
+                response is None
+                or 'rows' not in response
+                or len(response['rows']) <= 0
+            ):
+                break
+            queries.extend(response["rows"])
+            if len(response["rows"]) < 25000:
                 break
     except Exception as e:
-        print("Error while fetching pages info: {}".format(e))
+        print(f"Error while fetching pages info: {e}")
 
     if output_file:
         with open(output_file, 'w') as outfile:
             json.dump(queries, outfile)
 
-    print("{} queries for the page {}".format(len(queries), target_page))
+    print(f"{len(queries)} queries for the page {target_page}")
     return queries
 
 
@@ -137,16 +140,19 @@ def get_most_frequent_queries(service, start_date, end_date, outpath, only_usa =
                 }
             )
         response = execute_request(service, KITE_ADDR, request)
-        if response is not None and 'rows' in response and len(response['rows']) > 0:
-            queries.extend(response["rows"])
-            if len(response["rows"]) < 25000:
-                print("Last response contained only {}, breaking".format(len(response["rows"])))
-                break
-        else:
+        if (
+            response is None
+            or 'rows' not in response
+            or len(response['rows']) <= 0
+        ):
+            break
+        queries.extend(response["rows"])
+        if len(response["rows"]) < 25000:
+            print(f'Last response contained only {len(response["rows"])}, breaking')
             break
         i += 1
 
-    print("Received {} rows, writing them in {}".format(len(queries), outpath))
+    print(f"Received {len(queries)} rows, writing them in {outpath}")
     with open(outpath, "w") as outfile:
         json.dump(queries, outfile)
 
@@ -155,12 +161,10 @@ def extract_all_queries(start_date, end_date, page_list, service, outfile):
     result = {}
     try:
         with open(page_list, "r") as infile:
-            next_page = infile.readline().strip()
-            while next_page:
+            while next_page := infile.readline().strip():
                 result[next_page] = list_queries(next_page, start_date, end_date, service, None)
-                next_page = infile.readline().strip()
     except Exception as e:
-        print("Error while fetching queries: {}".format(e))
+        print(f"Error while fetching queries: {e}")
 
     with open(outfile, "w") as outfile:
         json.dump(result, outfile)

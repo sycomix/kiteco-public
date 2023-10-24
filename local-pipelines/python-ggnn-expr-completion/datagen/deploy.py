@@ -13,35 +13,36 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(m
 def run(cmd: str):
     ret = os.system(cmd)
     if ret != 0:
-        raise RuntimeError("running '{}' returned non-zero status: {}".format(cmd, ret))
+        raise RuntimeError(f"running '{cmd}' returned non-zero status: {ret}")
 
 
 def make_bundle(bundle: str, meta_info: str, kite_ml_path: str, env_vars: Dict[str, str]):
-    run("rm -rf {} && mkdir {}".format(bundle, bundle))
+    run(f"rm -rf {bundle} && mkdir {bundle}")
 
-    with open("{}/env.sh".format(bundle), 'w') as f:
+    with open(f"{bundle}/env.sh", 'w') as f:
         for k, v in env_vars.items():
-            f.write("{}={}\n".format(k, v))
+            f.write(f"{k}={v}\n")
 
-    run("go build -o {}/graph_data_server github.com/kiteco/kiteco/kite-go/lang/python/cmds/graph-data-server".format(
-        bundle
-    ))
-    run("cp -v {} {}/metainfo.json".format(meta_info, bundle))
-    run("mkdir {}/kite_ml".format(bundle))
-    run("cp -v {}/requirements.txt {}/kite_ml".format(kite_ml_path, bundle))
-    run("cp -rv {}/kite {}/kite_ml".format(kite_ml_path, bundle))
-    run("cp -v datagen/get_data.py {}".format(bundle))
-    run("cp -v datagen/run.sh {}".format(bundle))
-    run("cp -v datagen/start.sh {}".format(bundle))
+    run(
+        f"go build -o {bundle}/graph_data_server github.com/kiteco/kiteco/kite-go/lang/python/cmds/graph-data-server"
+    )
+    run(f"cp -v {meta_info} {bundle}/metainfo.json")
+    run(f"mkdir {bundle}/kite_ml")
+    run(f"cp -v {kite_ml_path}/requirements.txt {bundle}/kite_ml")
+    run(f"cp -rv {kite_ml_path}/kite {bundle}/kite_ml")
+    run(f"cp -v datagen/get_data.py {bundle}")
+    run(f"cp -v datagen/run.sh {bundle}")
+    run(f"cp -v datagen/start.sh {bundle}")
 
-    bundle_file = "{}.tar.gz".format(bundle)
-    run("tar czvf {} {}".format(bundle_file, bundle))
+    bundle_file = f"{bundle}.tar.gz"
+    run(f"tar czvf {bundle_file} {bundle}")
 
 
 def deploy_to_host(bundle: str, host: str, random_seed: int):
-    run("scp {}.tar.gz {}:.".format(bundle, host))
-    run("ssh {} 'rm -rf {} && tar xzf {}.tar.gz && cd {} && RANDOM_SEED={} ./start.sh'".format(
-        host, bundle, bundle, bundle, random_seed))
+    run(f"scp {bundle}.tar.gz {host}:.")
+    run(
+        f"ssh {host} 'rm -rf {bundle} && tar xzf {bundle}.tar.gz && cd {bundle} && RANDOM_SEED={random_seed} ./start.sh'"
+    )
 
 
 def main():
@@ -65,9 +66,9 @@ def main():
 
     assert len(args.hosts) > 0, "need to deploy to at least one host"
 
-    logging.info("deploying to {} hosts:".format(len(args.hosts)))
+    logging.info(f"deploying to {len(args.hosts)} hosts:")
     for host in args.hosts:
-        logging.info("* {}".format(host))
+        logging.info(f"* {host}")
 
     # continue to generate samples until we are killed to account for some
     # instances producing samples at different rates
@@ -92,7 +93,7 @@ def main():
     make_bundle(args.bundle, args.meta_info, args.kite_ml_path, env_vars)
 
     for i, host in enumerate(args.hosts):
-        logging.info("deploying {}.tar.gz to {}".format(args.bundle, host))
+        logging.info(f"deploying {args.bundle}.tar.gz to {host}")
         random_seed = i + 1
         deploy_to_host(args.bundle, host, random_seed)
 

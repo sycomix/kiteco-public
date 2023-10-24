@@ -14,7 +14,7 @@ from kite_airflow.common import files
 from kite_airflow.slack_alerts import task_fail_slack_alert
 
 
-DIR_BASE_URI = 's3://{}/{}'.format(configs.BUCKET, 'coding-stats-mail')
+DIR_BASE_URI = f's3://{configs.BUCKET}/coding-stats-mail'
 DIR_APPROX_PERCENTILES = 'approx_percentiles'
 DIR_DAILY_ACTIVE_USERS = 'daily_active_users'
 DIR_CODING_STATS = 'coding_stats'
@@ -55,7 +55,7 @@ approx_percentiles_op = AWSAthenaOperator(
     params={
         'languages': utils.get_supported_languages(),
     },
-    output_location='{}/{}/'.format(configs.DIR_SCRATCH_URI, DIR_APPROX_PERCENTILES),
+    output_location=f'{configs.DIR_SCRATCH_URI}/{DIR_APPROX_PERCENTILES}/',
     database=configs.DB_KITE_METRICS,
     dag=kite_coding_stats_email_dag,
 )
@@ -67,7 +67,7 @@ drop_daily_active_users_op = AWSAthenaOperator(
     params={
         'table_name': TABLE_DAILY_ACTIVE_USERS,
     },
-    output_location='{}/{}/'.format(configs.DIR_SCRATCH_URI, DIR_DAILY_ACTIVE_USERS),
+    output_location=f'{configs.DIR_SCRATCH_URI}/{DIR_DAILY_ACTIVE_USERS}/',
     database=configs.DB_KITE_METRICS,
     dag=kite_coding_stats_email_dag,
 )
@@ -78,9 +78,9 @@ create_daily_active_users_op = AWSAthenaOperator(
     query='athena/coding_stats_mail/tables/kite_daily_active_users.sql',
     params={
         'table_name': TABLE_DAILY_ACTIVE_USERS,
-        'data_location': '{}/{}/'.format(DIR_BASE_URI, DIR_DAILY_ACTIVE_USERS),
+        'data_location': f'{DIR_BASE_URI}/{DIR_DAILY_ACTIVE_USERS}/',
     },
-    output_location='{}/{}/'.format(configs.DIR_SCRATCH_URI, DIR_DAILY_ACTIVE_USERS),
+    output_location=f'{configs.DIR_SCRATCH_URI}/{DIR_DAILY_ACTIVE_USERS}/',
     database=configs.DB_KITE_METRICS,
     dag=kite_coding_stats_email_dag,
 )
@@ -93,7 +93,7 @@ update_daily_active_users_op = AWSAthenaOperator(
         'table_name': TABLE_DAILY_ACTIVE_USERS,
         'languages': utils.get_supported_languages(),
     },
-    output_location='{}/{}/'.format(configs.DIR_SCRATCH_URI, DIR_DAILY_ACTIVE_USERS),
+    output_location=f'{configs.DIR_SCRATCH_URI}/{DIR_DAILY_ACTIVE_USERS}/',
     database=configs.DB_KITE_METRICS,
     dag=kite_coding_stats_email_dag,
 )
@@ -107,7 +107,7 @@ coding_stats_op = AWSAthenaOperator(
         'languages': utils.get_supported_languages(),
         'num_of_weeks': NUM_OF_WEEKS,
     },
-    output_location='{}/{}/'.format(configs.DIR_SCRATCH_URI, DIR_CODING_STATS),
+    output_location=f'{configs.DIR_SCRATCH_URI}/{DIR_CODING_STATS}/',
     database=configs.DB_KITE_METRICS,
     dag=kite_coding_stats_email_dag,
 )
@@ -120,14 +120,13 @@ def get_approx_percentiles(ti):
         DIR_APPROX_PERCENTILES,
     )[0]
 
-    approx_percentiles = []
-    for percentile_index in range(1, 100):
-        approx_percentiles.append({
+    return [
+        {
             "percentile": percentile_index,
             "value": float(percentiles_list[f'pct_{percentile_index}']),
-        })
-
-    return approx_percentiles
+        }
+        for percentile_index in range(1, 100)
+    ]
 
 
 def get_coding_time_percentile(coding_hours, percentiles):
@@ -267,7 +266,7 @@ def submissions_to_cio(ti, execution_date, dag_run, storage_task_name, **context
 
 progress_storage_operator = PythonOperator(
     python_callable=lambda ti, **kwargs: ti.xcom_push(key='progress', value=0),
-    task_id='progress_storage_{}'.format(submissions_to_cio.__name__),
+    task_id=f'progress_storage_{submissions_to_cio.__name__}',
     dag=kite_coding_stats_email_dag,
     provide_context=True,
 )
@@ -277,7 +276,9 @@ submissions_to_cio_operator = PythonOperator(
     task_id=submissions_to_cio.__name__,
     dag=kite_coding_stats_email_dag,
     provide_context=True,
-    op_kwargs={'storage_task_name': 'progress_storage_{}'.format(submissions_to_cio.__name__)}
+    op_kwargs={
+        'storage_task_name': f'progress_storage_{submissions_to_cio.__name__}'
+    },
 )
 
 (

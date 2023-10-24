@@ -40,15 +40,14 @@ def main():
         print(ex.output)
         raise ex
 
-    # Pull out string literals
-    format_strings = []
-    for line in parser_lines + checker_lines + checker_lines2:
-        if ' ' in line:
-            format_strings.append(find_string_literal(line))
-
+    format_strings = [
+        find_string_literal(line)
+        for line in parser_lines + checker_lines + checker_lines2
+        if ' ' in line
+    ]
     # Delete repetitions and sort
     format_strings = sorted(set(format_strings))
-    
+
     # Print results
     for error_id, format_string in enumerate(format_strings):
         print('%d\t%s' % (error_id, format_string))

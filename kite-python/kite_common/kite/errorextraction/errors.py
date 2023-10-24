@@ -26,14 +26,10 @@ def matches_known_error_patterns(line):
     num_weak_patterns_matched = 0
     for pattern in weak_error_patterns:
         occurences = re.finditer(pattern, line)
-        indices = [occurence.start() for occurence in occurences]
-        if len(indices) > 0:
+        if indices := [occurence.start() for occurence in occurences]:
             num_weak_patterns_matched += len(indices)
 
-    if num_weak_patterns_matched >= 2:
-        return WEAK_MATCH
-
-    return NO_MATCH
+    return WEAK_MATCH if num_weak_patterns_matched >= 2 else NO_MATCH
 
 
 def is_comment(line):
@@ -93,11 +89,10 @@ def results_to_string_helper(result):
     return output
 
 def results_to_string(extraction_or_eval_results):
-    output = ""
-    for result in extraction_or_eval_results:
-        output += results_to_string_helper(result)
-
-    return output
+    return "".join(
+        results_to_string_helper(result)
+        for result in extraction_or_eval_results
+    )
 
 def extract_errors_from_file(f):
     extraction_results = []

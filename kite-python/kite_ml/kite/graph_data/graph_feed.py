@@ -26,8 +26,9 @@ def build_edges(lst: List[List[NodeID]]) -> List[Edge]:
 def assert_valid_edges(edge_set: List[EdgeType], edges: Dict[str, List[Edge]], num_nodes: int):
     edge_keys = edges.keys()
     num_edge_types = len(edge_keys)
-    assert num_edge_types <= 2*len(edge_set), \
-        'expected at most {} edge types, got {}'.format(2*len(edge_set), num_edge_types)
+    assert num_edge_types <= 2 * len(
+        edge_set
+    ), f'expected at most {2 * len(edge_set)} edge types, got {num_edge_types}'
 
     for edge_key, edges in edges.items():
         edge_type = EdgeType.from_edge_key(edge_key)
@@ -36,12 +37,17 @@ def assert_valid_edges(edge_set: List[EdgeType], edges: Dict[str, List[Edge]], n
             continue
 
         for edge in edges:
-            assert len(edge) == 2 and \
-                   isinstance(edge[0], int) and isinstance(edge[1], int), 'invalid edge format {}'.format(edge)
-            assert 0 <= edge[0] < num_nodes, \
-                'invalid from node id {} for edge of type {}'.format(edge[0], edge_key)
-            assert 0 <= edge[1] < num_nodes, \
-                'invalid to node id {} for edge of type {}'.format(edge[1], edge_key)
+            assert (
+                len(edge) == 2
+                and isinstance(edge[0], int)
+                and isinstance(edge[1], int)
+            ), f'invalid edge format {edge}'
+            assert (
+                0 <= edge[0] < num_nodes
+            ), f'invalid from node id {edge[0]} for edge of type {edge_key}'
+            assert (
+                0 <= edge[1] < num_nodes
+            ), f'invalid to node id {edge[1]} for edge of type {edge_key}'
 
 
 class GraphFeed(NamedTuple):
@@ -67,9 +73,9 @@ class GraphFeed(NamedTuple):
         nodes_types = set(self.node_types.sample_ids)
         nodes_subtokens = set(self.node_subtokens.sample_ids)
         for i in nodes_types:
-            assert i in nodes_subtokens, 'missing node {} in subtokens but is in types'.format(i)
+            assert i in nodes_subtokens, f'missing node {i} in subtokens but is in types'
         for i in nodes_subtokens:
-            assert i in nodes_types, 'missing node {} in types but is in subtokens'.format(i)
+            assert i in nodes_types, f'missing node {i} in types but is in subtokens'
 
         num_nodes = len(nodes_types)
 

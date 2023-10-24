@@ -73,10 +73,11 @@ class EndpointDataFeeder(DataFeeder):
 
     def _maybe_print_times(self):
         def mean(l: List[datetime.timedelta]) -> float:
-            if len(l) == 0:
+            if not l:
                 return 0.
             s = float(sum(l, datetime.timedelta(0)).microseconds / 1000)
             return s/float(len(l))
+
         if len(self._decode_times) == 3:
             mean_request = mean(self._request_times)
             self._request_times = []
@@ -100,9 +101,12 @@ class EndpointDataFeeder(DataFeeder):
 
             if resp.status_code != 200:
                 for i in range(self._retry_attempts):
-                    logging.warning('graph server returned non-zero status code {}: {}'.format(
-                        resp.status_code, resp.text))
-                    logging.warning('retrying attempt #{}, waiting for {} seconds'.format(i+1, self._retry_wait))
+                    logging.warning(
+                        f'graph server returned non-zero status code {resp.status_code}: {resp.text}'
+                    )
+                    logging.warning(
+                        f'retrying attempt #{i + 1}, waiting for {self._retry_wait} seconds'
+                    )
                     time.sleep(self._retry_wait)
                     resp = requests.post(self._endpoint, json={
                         'session': self._session,

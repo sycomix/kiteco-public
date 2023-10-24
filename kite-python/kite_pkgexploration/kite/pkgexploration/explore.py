@@ -68,10 +68,7 @@ def valid_canonical_name(obj):
 
     # check that we resolved the expected object, using __eq__ instead of `is`
     # see README.md (Fullname: Note 2)
-    if cur != obj:
-        return None
-
-    return name
+    return None if cur != obj else name
 
 
 # copied from pkgutil.walk_packages, but with extra `skipfn` functionality
@@ -105,8 +102,7 @@ def walk_packages(path=None, prefix='', skipfn=None, on_error=None):
                 # don't traverse path items we've seen before
                 path = [p for p in path if not seen(p)]
 
-                for subname in walk_packages(path, name + '.', skipfn, on_error):
-                    yield subname
+                yield from walk_packages(path, f'{name}.', skipfn, on_error)
 
 
 def skip_member(key):
@@ -123,9 +119,7 @@ def skip_member(key):
         return True
     if key in ATTR_BLACKLIST:
         return True
-    if key.startswith("func_") or key.startswith("im_"):
-        return True
-    return False
+    return bool(key.startswith("func_") or key.startswith("im_"))
 
 
 class Explorer(object):
@@ -189,13 +183,13 @@ class Explorer(object):
             name = canonical_name
             if name is None:
                 name = incoming_name
-                logger.warning("no canonical name found for {}".format(name))
+                logger.warning(f"no canonical name found for {name}")
 
             if self.skipexplore(name):
                 # don't record a node at all; this might leave a dangling node_id reference
                 return
 
-            logger.info("exploring {}".format(name))
+            logger.info(f"exploring {name}")
 
             refname = self._get_refname(incoming_name, name, obj)
             if refname is not None:
@@ -244,7 +238,7 @@ class Explorer(object):
                     member = getobjattr(obj, attr)
                     members[attr] = member
                 except BaseException as e:
-                    logger.warning("failed to extract member {} from {}".format(attr, name), exc_info=True)
+                    logger.warning(f"failed to extract member {attr} from {name}", exc_info=True)
 
             node = dict(
                 id=self.id(obj),
@@ -265,7 +259,7 @@ class Explorer(object):
                 node["source"] = source_info['source']
                 node["source_begin_line"] = source_info['line']
             except Exception as e:
-                logger.warning("failed to get source info for {}".format(name))
+                logger.warning(f"failed to get source info for {name}")
 
             node["argspec"] = reflectutils.get_argspec(obj)
 
@@ -274,21 +268,23 @@ class Explorer(object):
             # # possibly recurse into node members
             if kind in ("type", "module"):
                 for mname, mobj in members.items():
-                    self.explore(mobj, name + "." + mname)
+                    self.explore(mobj, f"{name}.{mname}")
             else:
                 # this will probably leave dangling node_id references
-                logger.debug("not recursing into members of %s (classification was '%s') " % (name, kind))
+                logger.debug(
+                    f"not recursing into members of {name} (classification was '{kind}') "
+                )
 
             # explore the type and base classes so that any external references are processed;
             # see README.md: Explore Note 4
-            self.explore(cls, name + ".__class__")
+            self.explore(cls, f"{name}.__class__")
             for i, base in enumerate(bases):
                 # this name is definitely not valid/navigable, but we'll fix it if necessary in post-processing
-                self.explore(base, "{}.__bases__[{}]".format(name, i))
+                self.explore(base, f"{name}.__bases__[{i}]")
 
             return self.id(obj)
         except Exception as e:
-            logger.warning("failed to explore {}".format(incoming_name), exc_info=True)
+            logger.warning(f"failed to explore {incoming_name}", exc_info=True)
 
     def import_subpackages(self, pkg, pkg_name):
         if not self.include_subpackages:
@@ -309,7 +305,7 @@ class Explorer(object):
             return False
 
         # use pkg_name (toplevel_name from explore_package below) here instead of pkg.__name__: see README.md (Sub Imports: Note 3)
-        for name in walk_packages(getattr(pkg, '__path__', []), pkg_name + ".", skipfn=skip_and_log, on_error=on_error):
+        for name in walk_packages(getattr(pkg, '__path__', []), f"{pkg_name}.", skipfn=skip_and_log, on_error=on_error):
             try:
                 importlib.import_module(name)
                 # no need to do exploration here: see README.md (Sub Imports: Note 1)
@@ -334,7 +330,7 @@ class Explorer(object):
         try:
             pkg = importlib.import_module(toplevel_name)
         except BaseException as e:
-            logger.exception("failed to import {}".format(toplevel_name))
+            logger.exception(f"failed to import {toplevel_name}")
             return None
 
         # do post-import configuration

@@ -15,7 +15,7 @@ class SOPostHandler(ContentHandler):
     def startElement(self, name, attrs):
         self.counter += 1
         if self.counter % 1000 == 0:
-            print("Parsed tag {}, and python posts {}".format(self.counter, self.python_counter))
+            print(f"Parsed tag {self.counter}, and python posts {self.python_counter}")
 
         if name != "row":
             return
@@ -51,17 +51,19 @@ class SOPostExtractor(ContentHandler):
 
         self.counter += 1
         if self.counter % 100000 == 0:
-            print("Parsed tag {}, and python posts {}".format(self.counter, self.python_counter))
+            print(f"Parsed tag {self.counter}, and python posts {self.python_counter}")
         if name != "row":
             return
         if attrs["PostTypeId"] != "1":
             return
         post_id = int(attrs["Id"])
-        path = "/home/moe/workspace/web-content/questions_queries/{}.csv".format(post_id)
+        path = f"/home/moe/workspace/web-content/questions_queries/{post_id}.csv"
         if not os.path.exists(path):
             return
         self.python_counter += 1
-        target_path = "/home/moe/workspace/web-content/questions_content/{}.txt".format(post_id)
+        target_path = (
+            f"/home/moe/workspace/web-content/questions_content/{post_id}.txt"
+        )
         with open(target_path, "w") as outfile:
             outfile.write(attrs["Body"])
 

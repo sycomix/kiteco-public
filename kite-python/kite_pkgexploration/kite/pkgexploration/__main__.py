@@ -93,9 +93,11 @@ def _check_pattern(s, pat):
     if len(s) < len(pat):
         return False
 
-    return (_check_prefix(s, pat) or
-            (s.endswith(pat) and s[-len(pat) - 1] == ".") or
-            (".{}.".format(pat) in s))
+    return (
+        _check_prefix(s, pat)
+        or (s.endswith(pat) and s[-len(pat) - 1] == ".")
+        or f".{pat}." in s
+    )
 
 
 def blacklisted(name):
@@ -130,26 +132,20 @@ def top_level_names(metadata, from_user=None):
 
 
 def stdlib_names():
-    # we only want global modules, not relative ones
-    path = []
-    for p in sys.path:
-        if os.path.abspath(p) != os.path.abspath(os.getcwd()):
-            path.append(p)
-
+    path = [
+        p
+        for p in sys.path
+        if os.path.abspath(p) != os.path.abspath(os.getcwd())
+    ]
     import pkgutil
-    names = set()
-    for _, name, _ in pkgutil.iter_modules(path):
-        names.add(name)
+    names = {name for _, name, _ in pkgutil.iter_modules(path)}
     for name in sys.builtin_module_names:
         names.add(name)
 
     return _cleanup_names(names)
 
 
-if _PY3:
-    _bytes = bytes
-else:
-    _bytes = str
+_bytes = bytes if _PY3 else str
 
 
 def decode_all(obj):
@@ -205,7 +201,7 @@ def main():
     if args.package != "builtin-stdlib":
         metadata = DistMeta.from_name(args.package)
     if metadata is None:
-        logger.error("unable to get metadata for {}".format(args.package))
+        logger.error(f"unable to get metadata for {args.package}")
 
     if args.package == "builtin-stdlib":
         # special flag for python std lib
@@ -240,31 +236,37 @@ def main():
     gc.disable()
 
     # Explore the package
-    logger.info("exploring top level names: {}".format(", ".join(names)))
+    logger.info(f'exploring top level names: {", ".join(names)}')
     shards = {}
     root_ids = {}
     for name in names:
-        logger.info("walking top-level name {}".format(name))
+        logger.info(f"walking top-level name {name}")
         exploration = Explorer.explore_package(name, metadata=metadata, refmap=REFMAP, skipexplore=skip)
         if exploration is None:
-            logger.error("exploration of top-level name {} failed".format(name))
+            logger.error(f"exploration of top-level name {name} failed")
             continue
 
         info_by_id = exploration['info_by_id']
         root_id = exploration['root_id']
         if root_id is None or root_id not in info_by_id:
-            logger.error("exploration of top-level name {} failed: no root id".format(name))
+            logger.error(f"exploration of top-level name {name} failed: no root id")
             continue
 
-        logger.info("found {} items for top-level name {}".format(reallen(exploration['info_by_id']), name))
+        logger.info(
+            f"found {reallen(exploration['info_by_id'])} items for top-level name {name}"
+        )
         shards[name] = info_by_id
         root_ids[name] = root_id
 
     if reallen(shards) == 0:
-        logger.critical("exploration failed, tried top level names: {}".format(", ".join(names)))
+        logger.critical(
+            f'exploration failed, tried top level names: {", ".join(names)}'
+        )
         sys.exit(1)
 
-    logger.info("successfully explored top-level names: {}".format(", ".join(shards.keys())))
+    logger.info(
+        f'successfully explored top-level names: {", ".join(shards.keys())}'
+    )
 
     # Write output
     out = {

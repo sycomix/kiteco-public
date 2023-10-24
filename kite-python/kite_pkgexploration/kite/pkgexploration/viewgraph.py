@@ -15,7 +15,7 @@ def find_node(g, path):
 
     cur = [x for x in index.values() if x['canonical_name'] == parts[0]]
     if len(cur) != 1:
-        raise Exception('found {} choices for root node'.format(len(cur)))
+        raise Exception(f'found {len(cur)} choices for root node')
     cur = cur[0]
 
     for part in parts[1:]:

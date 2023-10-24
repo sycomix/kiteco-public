@@ -132,7 +132,11 @@ def write_contact_prop_data(ti, **context):
 
     # Hubspot validates emails against some list of domain extensions. Go fetch a list to replicate that.
     domains_resp = requests.get('https://data.iana.org/TLD/tlds-alpha-by-domain.txt')
-    domains = set([d.lower() for d in domains_resp.text.split('\n') if re.match('^[a-z]+$', d.lower())])
+    domains = {
+        d.lower()
+        for d in domains_resp.text.split('\n')
+        if re.match('^[a-z]+$', d.lower())
+    }
     counter = 0
 
     for file in sorted(ti.xcom_pull(task_ids='list_hubspot_json_files')):
@@ -140,19 +144,23 @@ def write_contact_prop_data(ti, **context):
         for line in gzip.open(obj.get()['Body']):
             counter += 1
             if counter % 1000 == 0:
-                logger.info('Processed {} records'.format(counter))
+                logger.info(f'Processed {counter} records')
 
             rec = json.loads(line)
             email = rec['email']
             if not EMAIL_RE.match(email) or email.rsplit('.', 1)[1] not in domains:
-                logger.info('Skipping invalid email address {}'.format(email))
+                logger.info(f'Skipping invalid email address {email}')
                 continue
 
-            if any([rec.get('{}_percentage'.format(key)) is not None for key in LANGS]):
-                rec['user_data_primary_language'] = max(LANGS, key=lambda x: rec.get('{}_percentage'.format(x)) or 0)
+            if any(rec.get(f'{key}_percentage') is not None for key in LANGS):
+                rec['user_data_primary_language'] = max(
+                    LANGS, key=lambda x: rec.get(f'{x}_percentage') or 0
+                )
 
-            if any([rec.get('python_edits_in_{}'.format(key)) for key in EDITORS]):
-                rec['user_data_primary_python_editor'] = max(EDITORS, key=lambda x: rec.get('python_edits_in_{}'.format(x)) or 0)
+            if any(rec.get(f'python_edits_in_{key}') for key in EDITORS):
+                rec['user_data_primary_python_editor'] = max(
+                    EDITORS, key=lambda x: rec.get(f'python_edits_in_{x}') or 0
+                )
 
             hs_props = {prop: rec[prop] for prop in props if rec.get(prop) is not None}
             hs_props['kite_lifecycle_stages'] = 'User'  # This property is called 'Source' in HS
@@ -189,26 +197,41 @@ setup_partitions = AWSAthenaOperator(
     dag=dag,
 )
 
-[create_intermediate_table, insert_deltas] >> AWSAthenaOperator(
-    aws_conn_id='aws_us_east_1',
-    task_id='insert_rollups',
-    query='athena/queries/hubspot_rollup.tmpl.sql',
-    output_location='s3://kite-metrics-test/athena-results/ddl',
-    database='kite_metrics',
-    dag=dag,
-    params={
-        'scalar_props': [p for p in contact_props if 'agg' in p['sql']],
-        'map_props': [p for p in contact_props if 'map_agg' in p['sql']],
-        'scalar_time_rollups': set([prop['sql']['agg_days'] for prop in contact_props if 'agg_days' in prop['sql']]),
-    },
-) >> AWSAthenaOperator(
-    aws_conn_id='aws_us_east_1',
-    task_id='cleanup_rollup_table',
-    query='DROP TABLE hubspot_rollup_{{ds_nodash}}',
-    output_location='s3://kite-metrics-test/athena-results/ddl',
-    database='kite_metrics',
-    dag=dag,
-) >> setup_partitions
+(
+    (
+        [create_intermediate_table, insert_deltas]
+        >> AWSAthenaOperator(
+            aws_conn_id='aws_us_east_1',
+            task_id='insert_rollups',
+            query='athena/queries/hubspot_rollup.tmpl.sql',
+            output_location='s3://kite-metrics-test/athena-results/ddl',
+            database='kite_metrics',
+            dag=dag,
+            params={
+                'scalar_props': [
+                    p for p in contact_props if 'agg' in p['sql']
+                ],
+                'map_props': [
+                    p for p in contact_props if 'map_agg' in p['sql']
+                ],
+                'scalar_time_rollups': {
+                    prop['sql']['agg_days']
+                    for prop in contact_props
+                    if 'agg_days' in prop['sql']
+                },
+            },
+        )
+    )
+    >> AWSAthenaOperator(
+        aws_conn_id='aws_us_east_1',
+        task_id='cleanup_rollup_table',
+        query='DROP TABLE hubspot_rollup_{{ds_nodash}}',
+        output_location='s3://kite-metrics-test/athena-results/ddl',
+        database='kite_metrics',
+        dag=dag,
+    )
+    >> setup_partitions
+)
 
 
 (copy_kite_users_operator, setup_partitions) >> AWSAthenaOperator(
@@ -250,7 +273,7 @@ def write_cio_profile_attrs(task_instance, execution_date, dag_run, **context):
 
     def iter():
         for i, rec in enumerate(iter_records):
-            if not rec['id'] or not all(ord(c) < 128 for c in rec['id']):
+            if not rec['id'] or any(ord(c) >= 128 for c in rec['id']):
                 continue
             if 'time_zone' in rec:
                 rec['timezone'] = rec.pop('time_zone')
@@ -323,7 +346,7 @@ MAX_TRIES = 3
 
 
 def make_hubspot_request(path, data=None, method=None, tries=0):
-    url = 'https://api.hubapi.com/{}?hapikey={}'.format(path, Variable.get('hubspot_apikey'))
+    url = f"https://api.hubapi.com/{path}?hapikey={Variable.get('hubspot_apikey')}"
     req_fn = getattr(requests, method) if method else (requests.post if data else requests.get)
     resp = req_fn(url, **({'json': data} if data else {}))
     tries = tries + 1
@@ -332,7 +355,9 @@ def make_hubspot_request(path, data=None, method=None, tries=0):
         time.sleep(60)
         return make_hubspot_request(path, data, method, tries)
     if resp.status_code >= 300:
-        raise Exception('Error make hubspot request, code={}, response={}'.format(resp.status_code, resp.text))
+        raise Exception(
+            f'Error make hubspot request, code={resp.status_code}, response={resp.text}'
+        )
     return resp
 
 
@@ -351,7 +376,11 @@ def update_contact_props():
             continue
         if {k: v for k, v in props_dict[prop['name']].items() if k in prop} == prop:
             continue
-        make_hubspot_request('properties/v1/contacts/properties/named/{}'.format(prop['name']), prop, 'put')
+        make_hubspot_request(
+            f"properties/v1/contacts/properties/named/{prop['name']}",
+            prop,
+            'put',
+        )
 
 
 update_contact_props_operator = PythonOperator(

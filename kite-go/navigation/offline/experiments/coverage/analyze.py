@@ -239,10 +239,7 @@ class Analyzer:
 
 
 def find_tests(paths: List[str]) -> List[Test]:
-    recs = []
-    for idx, rec in enumerate(paths):
-        if is_test(rec):
-            recs.append(Test(rec, idx))
+    recs = [Test(rec, idx) for idx, rec in enumerate(paths) if is_test(rec)]
     return recs or [Test("", -1)]
 
 
@@ -251,9 +248,7 @@ def is_test(path: str) -> bool:
 
 
 def appraise(idx: int) -> float:
-    if idx == -1:
-        return 0
-    return 2. ** -idx
+    return 0 if idx == -1 else 2. ** -idx
 
 
 def to_markdown(

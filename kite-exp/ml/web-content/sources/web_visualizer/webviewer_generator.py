@@ -28,10 +28,7 @@ def extract_qid(s):
     return int(parts[4])
 
 def get_df_data(df):
-    result = []
-    for c in df:
-        result.append(df[c].tolist())
-    return result
+    return [df[c].tolist() for c in df]
 
 
 
@@ -148,7 +145,7 @@ class WebViewerGenerator(object):
             # Sharding mode
             data_cols = np.array(data_cols)
             for i in range(math.ceil(len(data_cols[0])/self.max_items_per_page)):
-                name = "{}_{}.html".format(self.topics_file[:-5], i+1)
+                name = f"{self.topics_file[:-5]}_{i + 1}.html"
                 trace = go.Table(
                     columnwidth=sizes,
                     header=dict(values=list(columns),
@@ -175,7 +172,9 @@ class WebViewerGenerator(object):
         columns, sizes = zip(*columns_and_size)
         data_cols = get_df_data(df_pages)
         hover_text = df_pages.topic_terms.tolist()
-        print("data cols lenght: {} and max items: {}".format(len(data_cols[0]), self.max_items_per_page))
+        print(
+            f"data cols lenght: {len(data_cols[0])} and max items: {self.max_items_per_page}"
+        )
         if len(data_cols[0]) <= self.max_items_per_page:
             trace = go.Table(
                 columnwidth=sizes,
@@ -190,7 +189,7 @@ class WebViewerGenerator(object):
             # Sharding
             data_cols = np.array(data_cols)
             for i in range(math.ceil(len(data_cols[0])/self.max_items_per_page)):
-                name = "{}_{}.html".format(self.so_posts_file[:-5], i+1)
+                name = f"{self.so_posts_file[:-5]}_{i + 1}.html"
                 chunk = data_cols[:, self.max_items_per_page*i:self.max_items_per_page*(i+1)]
                 trace = go.Table(
                     columnwidth=sizes,
@@ -208,7 +207,9 @@ class WebViewerGenerator(object):
         pages.kite_predicted_clicks = pages.kite_predicted_clicks.astype(np.int64)
         pages = pages[["clicks", "kite_predicted_clicks", "rank", "URL", "dominant_topic"]]
         pages["topic_terms"] = pages.dominant_topic.apply(lambda tid: self.get_topic_terms(tid))
-        pages["URL"] = pages.URL.apply(lambda u: "<a href=\"{}\">{}</a>".format(u, u.split('/')[-1]))
+        pages["URL"] = pages.URL.apply(
+            lambda u: f"""<a href=\"{u}\">{u.split('/')[-1]}</a>"""
+        )
         pages = pages.sort_values("clicks", ascending=False)
         return pages
 

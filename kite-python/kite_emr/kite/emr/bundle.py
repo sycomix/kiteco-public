@@ -21,7 +21,7 @@ except ImportError:
 
 class Path(object):
     def __init__(self, bucket, name=None, base=None):
-        if name == None and base == None:
+        if name is None and base is None:
             raise Exception("must set job name or base directory")
         if name != None and base != None:
             raise Exception("must set only job name or base directory")
@@ -82,7 +82,7 @@ class Bundle(object):
             for fn in filenames:
                 if os.path.splitext(fn)[1] != ".go":
                     continue
-                print("building %s" % os.path.join(dirpath, fn))
+                print(f"building {os.path.join(dirpath, fn)}")
                 p = subprocess.Popen(['go', 'build', fn], cwd=dirpath, env=env)
                 p.wait()
                 if p.returncode != 0:
@@ -101,16 +101,14 @@ class Bundle(object):
     def upload(self):
         files = []
         for dirpath, dirnames, filenames in os.walk(self.bundle_dir):
-            for fn in filenames:
-                files.append(os.path.join(dirpath, fn))
-
+            files.extend(os.path.join(dirpath, fn) for fn in filenames)
         s3 = boto3.resource('s3')
         for fn in files:
             clean_fn = os.path.join(self.path.path, fn[len(self.bundle_dir)+1:])
             try:
                 file = open(fn, 'rb')
             except IOError as ex:
-                sys.exit("error opening file %s: %s" % (fn, ex))
+                sys.exit(f"error opening file {fn}: {ex}")
             s3.Object(self.path.bucket, clean_fn).put(Body=file)
 
     def clean(self):

@@ -21,7 +21,7 @@ from kite_airflow.slack_alerts import task_fail_slack_alert
 logger = logging.getLogger(__name__)
 
 BUCKET = 'kite-youtube-data'
-SCRATCH_SPACE_LOC = 's3://{}/athena-scratch-space/'.format(BUCKET)
+SCRATCH_SPACE_LOC = f's3://{BUCKET}/athena-scratch-space/'
 
 
 def iter_s3_file(s3_hook, bucket, key):
@@ -50,17 +50,17 @@ schema_operators = []
 for table in ['youtube_queries', 'youtube_searches', 'youtube_channels', 'youtube_channel_details', 'youtube_socialblade_stats']:
     drop_op = AWSAthenaOperator(
         aws_conn_id='aws_us_east_1',
-        task_id='drop_table_{}'.format(table),
-        query='DROP TABLE IF EXISTS {}'.format(table),
+        task_id=f'drop_table_{table}',
+        query=f'DROP TABLE IF EXISTS {table}',
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database='kite_youtube_crawl',
-        dag=youtube_search_dag
+        dag=youtube_search_dag,
     )
 
     create_op = AWSAthenaOperator(
         aws_conn_id='aws_us_east_1',
-        task_id='create_table_{}'.format(table),
-        query='athena/tables/{}.tmpl.sql'.format(table),
+        task_id=f'create_table_{table}',
+        query=f'athena/tables/{table}.tmpl.sql',
         output_location='s3://kite-metrics-test/athena-results/ddl',
         database='kite_youtube_crawl',
         dag=youtube_search_dag,
@@ -95,7 +95,7 @@ schema_operators >> get_existing_channels_op
 
 def get_scratch_space_csv(s3hook, ti, task_id):
     filename = ti.xcom_pull(task_ids=task_id)
-    s3key = s3hook.get_key('athena-scratch-space/{}.csv'.format(filename), BUCKET)
+    s3key = s3hook.get_key(f'athena-scratch-space/{filename}.csv', BUCKET)
     return csv.DictReader(codecs.getreader("utf-8")(s3key.get()['Body']))
 
 
@@ -117,7 +117,7 @@ def youtube_crawl(ti, ts_nodash, **kwargs):
 
     try:
         for query in selected_queries:
-            print("Running query {}".format(query['query']))
+            print(f"Running query {query['query']}")
             query_hash = hashlib.md5(query['query'].encode('utf8')).hexdigest()
 
             # resp = requests.get('https://serpapi.com/search.json',
@@ -130,21 +130,24 @@ def youtube_crawl(ti, ts_nodash, **kwargs):
             }, headers={'content-type': 'application/json'})
 
             if resp.status_code != 200:
-                print("Error from SerpAPI: {} {}".format(resp.status_code, resp.text))
+                print(f"Error from SerpAPI: {resp.status_code} {resp.text}")
                 raise Exception()
 
             resp_json = resp.json()
 
             # if 'video_results' not in resp.json():
             if 'items' not in resp_json:
-                print("No results for {}".format(query['query']))
+                print(f"No results for {query['query']}")
                 continue
 
-            response_key = 'search_responses/{}/{}.json.gz'.format(query_hash, ts_nodash)
+            response_key = f'search_responses/{query_hash}/{ts_nodash}.json.gz'
             s3.load_bytes(gzip.compress(resp.text.encode('utf8')), response_key, BUCKET, replace=True)
 
             # all_channels = {v['channel']['link'] for v in resp_json['video_results'] if 'link' in v['channel']}
-            all_channels = {'https://www.youtube.com/channel/{}'.format(v['snippet']['channelId']) for v in resp_json['items']}
+            all_channels = {
+                f"https://www.youtube.com/channel/{v['snippet']['channelId']}"
+                for v in resp_json['items']
+            }
             n_new_channels = len(all_channels - ex_channels)
 
             for c in all_channels - ex_channels:
@@ -158,15 +161,16 @@ def youtube_crawl(ti, ts_nodash, **kwargs):
             for key in resp_json:
                 if not key.startswith('searches_related_to_'):
                     continue
-                for search in resp_json[key]['searches']:
-                    if search['query'] not in all_queries:
-                        new_queries.append({
-                            'query': search['query'],
-                            'seed': False,
-                            'generation': int(query.get('generation') or 0) + 1,
-                            'parent': query['query']
-                        })
-
+                new_queries.extend(
+                    {
+                        'query': search['query'],
+                        'seed': False,
+                        'generation': int(query.get('generation') or 0) + 1,
+                        'parent': query['query'],
+                    }
+                    for search in resp_json[key]['searches']
+                    if search['query'] not in all_queries
+                )
             search_records.append({
                 'query': query['query'],
                 'query_hash': query_hash,
@@ -179,7 +183,11 @@ def youtube_crawl(ti, ts_nodash, **kwargs):
         for key, objs in [('channels', new_channels), ('search_queries', new_queries), ('searches', search_records)]:
             if objs:
                 contents = gzip.compress('\n'.join([json.dumps(obj) for obj in objs]).encode('utf8'))
-                s3.load_bytes(contents, '{}/{}-{}.json.gz'.format(key, ts_nodash, uuid.uuid4().hex), BUCKET)
+                s3.load_bytes(
+                    contents,
+                    f'{key}/{ts_nodash}-{uuid.uuid4().hex}.json.gz',
+                    BUCKET,
+                )
 
 
 youtube_crawl_op = PythonOperator(
@@ -221,9 +229,8 @@ def get_channel_details(ti, ts_nodash, **kwargs):
         c_parts = channel.split('/')
         channels_by_type[c_parts[-2]].append(c_parts[-1])
 
-    print("Getting channel details for {} new channels and {} new users".format(
-        len(channels_by_type['channel']),
-        len(channels_by_type['user']))
+    print(
+        f"Getting channel details for {len(channels_by_type['channel'])} new channels and {len(channels_by_type['user'])} new users"
     )
 
     c_details = []
@@ -241,7 +248,7 @@ def get_channel_details(ti, ts_nodash, **kwargs):
 
             resp = requests.get(url, params=params, headers={'content-type': 'application/json'})
             if not resp.json().get('items'):
-                print("Failed to get user: {}".format(username))
+                print(f"Failed to get user: {username}")
                 c_details.append({'forUsername': username})
                 continue
 
@@ -255,14 +262,17 @@ def get_channel_details(ti, ts_nodash, **kwargs):
 
             resp = requests.get(url, params=params, headers={'content-type': 'application/json'})
             if not resp.json().get('items'):
-                print("Failed to get channels: {}".format(', '.join(chunk)))
+                print(f"Failed to get channels: {', '.join(chunk)}")
                 continue
-            for item in resp.json()['items']:
-                c_details.append(item)
+            c_details.extend(iter(resp.json()['items']))
     finally:
-        print("Loading channel details for {} channels".format(len(c_details)))
+        print(f"Loading channel details for {len(c_details)} channels")
         contents = gzip.compress('\n'.join([json.dumps(obj) for obj in c_details]).encode('utf8'))
-        s3.load_bytes(contents, 'channel_details/{}-{}.json.gz'.format(ts_nodash, uuid.uuid4().hex), BUCKET)
+        s3.load_bytes(
+            contents,
+            f'channel_details/{ts_nodash}-{uuid.uuid4().hex}.json.gz',
+            BUCKET,
+        )
 
 
 get_channel_details_op = PythonOperator(
@@ -293,7 +303,7 @@ def enqueue_socialblade_channels(ti, ts_nodash, **kwargs):
     sqs_hook = SQSHook('aws_us_east_1')
 
     new_channels = {c['id'] for c in get_scratch_space_csv(s3, ti, get_new_socialblade_channels.task_id)}
-    print('Enqueuing {} channels'.format(len(new_channels)))
+    print(f'Enqueuing {len(new_channels)} channels')
     sqs_hook.get_conn().purge_queue(QueueUrl=QUEUE_URL)
 
     # Sleep to allow purge to complete

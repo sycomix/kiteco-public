@@ -55,14 +55,11 @@ class BagOfItems(Feature):
         self.cardinality = cardinality
 
     def feature_list(self, record: RawRecord) -> List[int]:
-        extracted = self.extractor(record)
-        # assert len(extracted) <= self.ngrams-1
-        return extracted
+        return self.extractor(record)
 
     def encode_op(self, source_slice: tf.Tensor) -> tf.Tensor:
         one_hot = tf.one_hot(source_slice, self.cardinality)
-        s = tf.reduce_sum(one_hot, axis=1)
-        return s
+        return tf.reduce_sum(one_hot, axis=1)
 
 
 class Integral(Feature):
@@ -94,12 +91,12 @@ class FeatureEncoder(object):
 
     # in_size returns the size of the input feature list which is fed to Tensorflow.
     def in_size(self) -> int:
-        return sum([f.in_size for f in self.features])
+        return sum(f.in_size for f in self.features)
 
     # out_size returns the size of the transformed output tensor, encoded via encode_op, which can be fed directly
     # into a classifier.
     def out_size(self) -> int:
-        return sum([f.out_size for f in self.features])
+        return sum(f.out_size for f in self.features)
 
     # feature_list returns a list of integers which can be fed into the Tensorflow graph and subsequently encoded
     # via encode_op.
@@ -133,6 +130,7 @@ class KeywordModelEncoder(FeatureEncoder):
 
     @staticmethod
     def _get_features(config: Config) -> List[Feature]:
+
         class Nodes(Categorical):
             def __init__(self):
                 super().__init__(self.extractor, cardinality=Constants.N_NODES, count=2)
@@ -190,6 +188,8 @@ class KeywordModelEncoder(FeatureEncoder):
                 return "Which keyword are already present in doc".format(config.lookback)
 
 
+
+
         class PrevTokens(Categorical):
             def __init__(self):
                 super().__init__(self.extractor, cardinality=Constants.N_TOKENS, count=config.lookback)
@@ -200,7 +200,9 @@ class KeywordModelEncoder(FeatureEncoder):
                 return rec.features.prev_tokens[-config.lookback:]
 
             def describe(self):
-                return "Previous {} tokens (per category)".format(config.lookback)
+                return f"Previous {config.lookback} tokens (per category)"
+
+
 
 
         return [Nodes(), FirstToken(), RelIndent(), PrevTokens(), FirthChar(), PrevKeywords()]

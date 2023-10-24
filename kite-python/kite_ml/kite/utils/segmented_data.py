@@ -30,13 +30,11 @@ class SegmentedIndicesFeed(NamedTuple):
 class SegmentedIndices(object):
     def __init__(self, prefix: str):
         self.sample_ids: tf.Tensor = tf.placeholder(
-            dtype=tf.int32,
-            shape=[None], name=prefix+'_sample_ids',
+            dtype=tf.int32, shape=[None], name=f'{prefix}_sample_ids'
         )
 
         self.indices: tf.Tensor = tf.placeholder(
-            dtype=tf.int32,
-            shape=[None], name=prefix+'_indices',
+            dtype=tf.int32, shape=[None], name=f'{prefix}_indices'
         )
 
     def dict(self) -> Dict[str, tf.Tensor]:

@@ -166,12 +166,14 @@ def fork(count=2):
 def decorator_with_options(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and len(kwargs) == 0 and inspect.isfunction(args[0]):
+        if len(args) == 1 and not kwargs and inspect.isfunction(args[0]):
             return func(args[0])
 
         def real_decorator(inner_func):
             return func(inner_func, *args, **kwargs)
+
         return real_decorator
+
     return wrapper
 
 

@@ -25,21 +25,14 @@ class EdgePlaceholders(object):
     def _get_edge_keys(self) -> List[str]:
         keys = []
         for edge_type in self._edge_set:
-            for forward in [True, False]:
-                keys.append(edge_type.edge_key(forward))
+            keys.extend(edge_type.edge_key(forward) for forward in [True, False])
         return keys
 
     def dict(self) -> Dict[str, tf.Tensor]:
-        d = {}
-        for adj_list in self.edges.values():
-            d[adj_list.name] = adj_list
-        return d
+        return {adj_list.name: adj_list for adj_list in self.edges.values()}
 
     def feed_dict(self, feed: Dict[str, List[Edge]]) -> Dict[tf.Tensor, Any]:
-        d = {}
-        for key, adj_list in feed.items():
-            d[self.edges[key]] = adj_list
-        return d
+        return {self.edges[key]: adj_list for key, adj_list in feed.items()}
 
 
 class NodeFeed(NamedTuple):

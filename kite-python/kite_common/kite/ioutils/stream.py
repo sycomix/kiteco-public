@@ -9,8 +9,7 @@ def loadjson(f, bufsize=1000000, **kwargs):
 	last_error = None
 	cur = ""
 	while True:
-		buf = f.read(bufsize)
-		if buf:
+		if buf := f.read(bufsize):
 			cur += buf.decode()
 			cur = cur.lstrip() # in rare cases, there are spaces in front causing problems decoding
 		elif last_error is not None:

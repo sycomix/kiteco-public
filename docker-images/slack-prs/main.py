@@ -59,10 +59,7 @@ def pr_queue_for(github_username, prs, comments_by_pr):
 
 		response += 'you are *%s* for %s %s: *%s*\n' % (role, url, slack_escape(title), update_msg)
 
-	if response == "":
-		return "you are not on any pull requests"
-	else:
-		return response
+	return "you are not on any pull requests" if response == "" else response
 
 
 def updates_since(github_username, prs, comments_by_pr, since):
@@ -75,9 +72,9 @@ def updates_since(github_username, prs, comments_by_pr, since):
 			comments = github.fetch_comments(number)
 			comments_by_pr[number] = comments
 
-		updates_by_user = github.summarize_updates_since(github_username, comments, since)
-
-		if updates_by_user:
+		if updates_by_user := github.summarize_updates_since(
+			github_username, comments, since
+		):
 			status = ", ".join("%d new from %s" % (count, user) for user, count in updates_by_user.items())
 			response += '*%s* (%s) %s\n' % (status, url, slack_escape(title))
 
@@ -93,8 +90,6 @@ def main():
 	conn = None
 	user_ids_by_name = {}
 	user_names_by_id = {}
-	im_channel_by_user = {}
-
 	# Get messaging setup info
 	payload = dict(token=TOKEN)
 	r = requests.post('https://slack.com/api/rtm.start', data=payload).json()
@@ -123,9 +118,10 @@ def main():
 		channel_ids_by_name[name] = id
 		channel_names_by_id[id] = name
 
-	for im_channel in r["ims"]:
-		im_channel_by_user[user_names_by_id[im_channel["user"]]] = im_channel["id"]
-
+	im_channel_by_user = {
+		user_names_by_id[im_channel["user"]]: im_channel["id"]
+		for im_channel in r["ims"]
+	}
 	# Open websocket
 	conn = websocket.create_connection(dial_url)
 	print("Connected")
@@ -135,9 +131,8 @@ def main():
 	comments = {}
 	if args.daily:
 		for user, ch in im_channel_by_user.items():
-			github_username = GITHUB_USERNAME_BY_SLACK_USERNAME.get(user, None)
-			if github_username:
-				print('Sending PM to %s...' % user)
+			if github_username := GITHUB_USERNAME_BY_SLACK_USERNAME.get(user, None):
+				print(f'Sending PM to {user}...')
 				msg = pr_queue_for(github_username, prs, comments)
 				print(msg.replace("\n", "\n    "))
 				send(conn, ch, "Here is your daily pull request update:\n" + msg)
@@ -149,7 +144,7 @@ def main():
 				# Read prev timestamp
 				with open(args.since) as f:
 					since = float(f.read().strip())
-				
+
 				# Write new timestamp
 				with open(args.since, "w") as f:
 					f.write(str(time.time()))
@@ -158,11 +153,9 @@ def main():
 
 
 		for user, ch in im_channel_by_user.items():
-			github_username = GITHUB_USERNAME_BY_SLACK_USERNAME.get(user, None)
-			if github_username:
-				msg = updates_since(github_username, prs, comments, since)
-				if msg:
-					print('Sending PM to %s...' % user)
+			if github_username := GITHUB_USERNAME_BY_SLACK_USERNAME.get(user, None):
+				if msg := updates_since(github_username, prs, comments, since):
+					print(f'Sending PM to {user}...')
 					print(msg)
 					send(conn, ch, msg)
 

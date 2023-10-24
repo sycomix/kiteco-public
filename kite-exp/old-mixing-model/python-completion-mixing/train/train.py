@@ -36,10 +36,12 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--traindata', type=str, default=default_traindata_path)
-    parser.add_argument('--out_dir', type=str, default='out/{}/model'.format(ts))
-    parser.add_argument('--frozen_model', type=str, default='out/{}/mix_model.frozen.pb'.format(ts))
-    parser.add_argument('--tensorboard', type=str, default='data/{}/'.format(ts))
-    parser.add_argument('--checkpoint_path', type=str, default='out/{}/ckpt'.format(ts))
+    parser.add_argument('--out_dir', type=str, default=f'out/{ts}/model')
+    parser.add_argument(
+        '--frozen_model', type=str, default=f'out/{ts}/mix_model.frozen.pb'
+    )
+    parser.add_argument('--tensorboard', type=str, default=f'data/{ts}/')
+    parser.add_argument('--checkpoint_path', type=str, default=f'out/{ts}/ckpt')
     parser.add_argument('--steps', type=int, default=int(1e3))
     args = parser.parse_args()
 

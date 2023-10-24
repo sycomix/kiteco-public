@@ -20,8 +20,8 @@ def main():
 
     args = parser.parse_args()
 
-    freq = set([l.strip() for l in open(args.freq_path).readlines()])
-    ggnn = set([l.strip() for l in open(args.ggnn_path).readlines()])
+    freq = {l.strip() for l in open(args.freq_path).readlines()}
+    ggnn = {l.strip() for l in open(args.ggnn_path).readlines()}
     stan = [l.strip() for l in open(args.stan_path).readlines()]
 
     # deps.json is a map from a packages to a list of packages it depends on
@@ -53,10 +53,7 @@ def main():
         original = copy.deepcopy(g.nodes())
         for n in original:
             for d in deps[n]:
-                if d in alias:
-                    ds = alias[d]
-                else:
-                    ds = [d]
+                ds = alias.get(d, [d])
                 for dd in ds:
                     g.add_node(dd)
                     g.add_edge(n, dd)
@@ -79,23 +76,19 @@ def main():
             break
         g_trim = copy.deepcopy(g_new)
 
-    # Write the ordered package list to file
-    o = open(args.ordered_path, 'w+')
-    for item in final:
-        o.write(item + '\n')
-    o.close()
-
+    with open(args.ordered_path, 'w+') as o:
+        for item in final:
+            o.write(item + '\n')
     # Collect a list of all possible packages
     all_packages = cooc.union(freq).union(ggnn).union(set(stan))
-    for p in deps:
+    for p, value in deps.items():
         all_packages.add(p)
-        for d in deps[p]:
+        for d in value:
             all_packages.add(d)
 
-    all_o = open(args.all_path, 'w+')
-    for item in all_packages:
-        all_o.write(item + '\n')
-    all_o.close()
+    with open(args.all_path, 'w+') as all_o:
+        for item in all_packages:
+            all_o.write(item + '\n')
 
 
 if __name__ == '__main__':

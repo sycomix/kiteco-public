@@ -66,13 +66,15 @@ def conv1d(x, scope, nf, *, w_init_stdev=0.02, cpu_or_train=True):
         *start, nx = shape_list(x)
         w = tf.compat.v1.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
         b = tf.compat.v1.get_variable('b', [nf], initializer=tf.constant_initializer(0))
-        if cpu_or_train:
-            # [batch, context, nf]
-            c = tf.nn.conv1d(x, filters=w, stride=1, padding='VALID') + b
-        else:
-            # NOTE: this is memory intensive for large embeddings, but if it fits on the GPU its faster
-            c = tf.reshape(tf.matmul(tf.reshape(x, [-1, nx]), tf.reshape(w, [-1, nf]))+b, start+[nf])
-        return c
+        return (
+            tf.nn.conv1d(x, filters=w, stride=1, padding='VALID') + b
+            if cpu_or_train
+            else tf.reshape(
+                tf.matmul(tf.reshape(x, [-1, nx]), tf.reshape(w, [-1, nf]))
+                + b,
+                start + [nf],
+            )
+        )
 
 
 def lr_mask(nd, ns, dtype, *, batch=None):
@@ -110,7 +112,7 @@ def attn(x, scope, n_state, *, mask: tf.Tensor, config: Config, past=None, cpu_o
     """
     assert x.shape.ndims == 3
     assert n_state % config.n_head == 0
-    assert len(shape_list(mask)) == 2 or len(shape_list(mask)) == 3
+    assert len(shape_list(mask)) in {2, 3}
 
     def split_heads(x):
         # From [batch, num_dest_tokens, embedding] to [batch, heads, num_dest_tokens, embedding // heads]
@@ -178,8 +180,7 @@ def mlp(x, scope, n_state, cpu_or_train=True):
     with tf.compat.v1.variable_scope(scope):
         nx = x.shape[-1].value
         h = gelu(conv1d(x, 'c_fc', n_state))
-        h2 = conv1d(h, 'c_proj', nx, cpu_or_train=cpu_or_train)
-        return h2
+        return conv1d(h, 'c_proj', nx, cpu_or_train=cpu_or_train)
 
 
 def transformer_block(x, scope, *, config: Config, mask: tf.Tensor, past=None, cpu_or_train=True):

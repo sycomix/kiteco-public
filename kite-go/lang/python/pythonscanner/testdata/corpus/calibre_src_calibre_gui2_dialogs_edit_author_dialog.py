@@ -138,8 +138,9 @@ class EditAuthorsDialog(QDialog, Ui_EditAuthorsDialog):
 
     def save_state(self):
         self.table_column_widths = []
-        for c in range(0, self.table.columnCount()):
-            self.table_column_widths.append(self.table.columnWidth(c))
+        self.table_column_widths.extend(
+            self.table.columnWidth(c) for c in range(0, self.table.columnCount())
+        )
         gprefs['manage_authors_table_widths'] = self.table_column_widths
         gprefs['manage_authors_dialog_geometry'] = bytearray(self.saveGeometry())
 
@@ -241,7 +242,7 @@ class EditAuthorsDialog(QDialog, Ui_EditAuthorsDialog):
         self.buttonBox.button(QDialogButtonBox.Cancel).setAutoDefault(False)
         st = icu_lower(unicode(self.find_box.currentText()))
 
-        for i in range(0, self.table.rowCount()*2):
+        for _ in range(0, self.table.rowCount()*2):
             self.start_find_pos = (self.start_find_pos + 1) % (self.table.rowCount()*2)
             r = (self.start_find_pos/2)%self.table.rowCount()
             c = self.start_find_pos % 2

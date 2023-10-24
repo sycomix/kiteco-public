@@ -67,12 +67,12 @@ class FlvReader(io.BytesIO):
         self.read(3)
         quality_entry_count = self.read_unsigned_char()
         # QualityEntryCount
-        for i in range(quality_entry_count):
+        for _ in range(quality_entry_count):
             self.read_string()
 
         segment_run_count = self.read_unsigned_int()
         segments = []
-        for i in range(segment_run_count):
+        for _ in range(segment_run_count):
             first_segment = self.read_unsigned_int()
             fragments_per_segment = self.read_unsigned_int()
             segments.append((first_segment, fragments_per_segment))
@@ -91,19 +91,16 @@ class FlvReader(io.BytesIO):
 
         quality_entry_count = self.read_unsigned_char()
         # QualitySegmentUrlModifiers
-        for i in range(quality_entry_count):
+        for _ in range(quality_entry_count):
             self.read_string()
 
         fragments_count = self.read_unsigned_int()
         fragments = []
-        for i in range(fragments_count):
+        for _ in range(fragments_count):
             first = self.read_unsigned_int()
             first_ts = self.read_unsigned_long_long()
             duration = self.read_unsigned_int()
-            if duration == 0:
-                discontinuity_indicator = self.read_unsigned_char()
-            else:
-                discontinuity_indicator = None
+            discontinuity_indicator = self.read_unsigned_char() if duration == 0 else None
             fragments.append({
                 'first': first,
                 'ts': first_ts,
@@ -135,11 +132,11 @@ class FlvReader(io.BytesIO):
         self.read_string()  # MovieIdentifier
         server_count = self.read_unsigned_char()
         # ServerEntryTable
-        for i in range(server_count):
+        for _ in range(server_count):
             self.read_string()
         quality_count = self.read_unsigned_char()
         # QualityEntryTable
-        for i in range(quality_count):
+        for _ in range(quality_count):
             self.read_string()
         # DrmData
         self.read_string()
@@ -148,14 +145,14 @@ class FlvReader(io.BytesIO):
 
         segments_count = self.read_unsigned_char()
         segments = []
-        for i in range(segments_count):
+        for _ in range(segments_count):
             box_size, box_type, box_data = self.read_box_info()
             assert box_type == b'asrt'
             segment = FlvReader(box_data).read_asrt()
             segments.append(segment)
         fragments_run_count = self.read_unsigned_char()
         fragments = []
-        for i in range(fragments_run_count):
+        for _ in range(fragments_run_count):
             box_size, box_type, box_data = self.read_box_info()
             assert box_type == b'afrt'
             fragments.append(FlvReader(box_data).read_afrt())
@@ -184,9 +181,7 @@ def build_fragments_list(boot_info):
     first_frag_number = fragment_run_entry_table[0]['first']
     fragments_counter = itertools.count(first_frag_number)
     for segment, fragments_count in segment_run_table['segment_run']:
-        for _ in range(fragments_count):
-            res.append((segment, next(fragments_counter)))
-
+        res.extend((segment, next(fragments_counter)) for _ in range(fragments_count))
     if boot_info['live']:
         res = res[-2:]
 
@@ -212,14 +207,14 @@ def write_flv_header(stream):
 
 def write_metadata_tag(stream, metadata):
     """Writes optional metadata tag to stream"""
-    SCRIPT_TAG = b'\x12'
-    FLV_TAG_HEADER_LEN = 11
-
     if metadata:
+        SCRIPT_TAG = b'\x12'
         stream.write(SCRIPT_TAG)
         write_unsigned_int_24(stream, len(metadata))
         stream.write(b'\x00\x00\x00\x00\x00\x00\x00')
         stream.write(metadata)
+        FLV_TAG_HEADER_LEN = 11
+
         write_unsigned_int(stream, FLV_TAG_HEADER_LEN + len(metadata))
 
 
@@ -286,7 +281,7 @@ class F4mFD(FragmentFD):
     def real_download(self, filename, info_dict):
         man_url = info_dict['url']
         requested_bitrate = info_dict.get('tbr')
-        self.to_screen('[%s] Downloading f4m manifest' % self.FD_NAME)
+        self.to_screen(f'[{self.FD_NAME}] Downloading f4m manifest')
         urlh = self.ydl.urlopen(man_url)
         man_url = urlh.geturl()
         # Some manifests may be malformed, e.g. prosiebensat1 generated manifests
@@ -352,7 +347,7 @@ class F4mFD(FragmentFD):
             if info_dict.get('extra_param_to_segment_url'):
                 query.append(info_dict['extra_param_to_segment_url'])
             url_parsed = base_url_parsed._replace(path=base_url_parsed.path + name, query='&'.join(query))
-            frag_filename = '%s-%s' % (ctx['tmpfilename'], name)
+            frag_filename = f"{ctx['tmpfilename']}-{name}"
             try:
                 success = ctx['dl'].download(frag_filename, {'url': url_parsed.geturl()})
                 if not success:
@@ -370,16 +365,15 @@ class F4mFD(FragmentFD):
                     os.remove(encodeFilename(frag_sanitized))
                 else:
                     frags_filenames.append(frag_sanitized)
-            except (compat_urllib_error.HTTPError, ) as err:
-                if live and (err.code == 404 or err.code == 410):
-                    # We didn't keep up with the live window. Continue
-                    # with the next available fragment.
-                    msg = 'Fragment %d unavailable' % frag_i
-                    self.report_warning(msg)
-                    fragments_list = []
-                else:
+            except compat_urllib_error.HTTPError as err:
+                if not live or err.code not in [404, 410]:
                     raise
 
+                # We didn't keep up with the live window. Continue
+                # with the next available fragment.
+                msg = 'Fragment %d unavailable' % frag_i
+                self.report_warning(msg)
+                fragments_list = []
             if not fragments_list and live and bootstrap_url:
                 fragments_list = self._update_live_fragments(bootstrap_url, frag_i)
                 total_frags += len(fragments_list)

@@ -12,7 +12,7 @@ MP_MAX_CONCURRENT_REQUESTS = 100
 AWS_CONN_ID = 'aws_us_east_1'
 BUCKET = 'kite-metrics' if utils.is_production() else 'kite-metrics-test'
 DIR_SCRATCH_SPACE = 'athena-scratch-space'
-DIR_SCRATCH_URI = 's3://{}/{}'.format(BUCKET, DIR_SCRATCH_SPACE)
+DIR_SCRATCH_URI = f's3://{BUCKET}/{DIR_SCRATCH_SPACE}'
 
 # Athena
 DB_KITE_METRICS = 'kite_metrics'

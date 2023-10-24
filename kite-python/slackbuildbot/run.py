@@ -66,8 +66,7 @@ def _sdoc(docstr):
     Mostly to help reduce verbosity in the code
     """
     if docstr is not None:
-        split_txt = docstr.strip().split("\n")
-        if split_txt:
+        if split_txt := docstr.strip().split("\n"):
             return split_txt[0]
     return "" # if empty
 
@@ -104,8 +103,7 @@ async def show_help(bot, command):
         bot.reply(
             "Help for command not found. Type `list commands` for a list of available commands")
     else:
-        msg_fmt = "`{}`: {}\n\nCommand regex:\n```{}```".format(
-            command_f.__name__, command_f.__doc__.strip(), regex_str.pattern)
+        msg_fmt = f"`{command_f.__name__}`: {command_f.__doc__.strip()}\n\nCommand regex:\n```{regex_str.pattern}```"
         bot.reply(msg_fmt)
 
 cmd_regex = (
@@ -123,15 +121,15 @@ async def stage_release(bot, artifact_type, ref):
         return
 
     # set kwargs based on messsage
-    kwargs = {}
-    kwargs["prepare"] = False
-    kwargs["binaries"] = False
-    kwargs["quiet"] = True
-    kwargs["backend"] = artifact_type == "backend"
-    kwargs["website"] = artifact_type == "website"
-    kwargs["client"] = "macos" if artifact_type == "mac" else False
-    kwargs["ref"] = ref
-
+    kwargs = {
+        "prepare": False,
+        "binaries": False,
+        "quiet": True,
+        "backend": artifact_type == "backend",
+        "website": artifact_type == "website",
+        "client": "macos" if artifact_type == "mac" else False,
+        "ref": ref,
+    }
     async with bot.require_lock(L_RELEASE):
         cmd_runner = build_commands.CommandRunner(bot)
         await cmd_runner.stage_release(**kwargs)
@@ -163,11 +161,7 @@ async def build_test(bot, build, branch, no_binaries, only_plugins):
     Refer to the command regex for all valid things to build
     """
     # set kwargs based on messsage
-    kwargs = {}
-    kwargs["binaries"] = not no_binaries
-    kwargs["build"] = build
-
-    kwargs["only_plugins"] = []
+    kwargs = {"binaries": not no_binaries, "build": build, "only_plugins": []}
     if only_plugins:
         plugin_list = only_plugins.strip().split("only ")
         if len(plugin_list) == 2:
@@ -189,7 +183,7 @@ CLIENTS = ("macos", "windows", "linux")
 PLUGINS = ("vscode", "atom")
 cmd_regex = r"^release ([\w%, ]+)"
 @respond_to(cmd_regex)
-async def release(bot, items):  # pylint: disable=too-many-branches
+async def release(bot, items):    # pylint: disable=too-many-branches
     """Release staged releases
 
     Usage: release [items to release]
@@ -236,29 +230,27 @@ async def release(bot, items):  # pylint: disable=too-many-branches
         if artifact_type == 'all':
             artifacts.extend(('binaries', 'readmes'))
             artifacts.extend(PLUGINS)
-            artifacts.extend(plat + ' ' + ' '.join(artifact_args) for plat in CLIENTS)
+            artifacts.extend(f'{plat} ' + ' '.join(artifact_args) for plat in CLIENTS)
         elif artifact_type == 'clients':
-            artifacts.extend(plat + ' ' + ' '.join(artifact_args) for plat in CLIENTS)
+            artifacts.extend(f'{plat} ' + ' '.join(artifact_args) for plat in CLIENTS)
         elif artifact_type == 'plugins':
             artifacts.extend(PLUGINS)
 
-        # client platforms (with optional canary)
         elif artifact_type in CLIENTS:
             pct = 100
             if len(artifact_args) > 0:
                 pct_str = artifact_args[-1].strip()
                 if not pct_str.endswith('%'):
-                    bot.reply("invalid percentage `{}` (must end in %)".format(pct))
+                    bot.reply(f"invalid percentage `{pct}` (must end in %)")
                     return
                 try:
                     pct = int(pct_str[:-1])
                 except ValueError as e:
-                    bot.reply("invalid percentage `{}` ({})".format(pct, e))
+                    bot.reply(f"invalid percentage `{pct}` ({e})")
                     return
 
             kwargs[artifact_type] = pct
 
-        # backend release branch
         elif artifact_type == 'backend':
             if len(artifact_args) == 0:
                 bot.reply("backend release requires a branch")
@@ -266,13 +258,12 @@ async def release(bot, items):  # pylint: disable=too-many-branches
             # release branch is last artifact_args
             kwargs[artifact_type] = artifact_args[-1]
 
-        # everything else
         elif artifact_type in PLUGINS or artifact_type in (
                 'website', 'binaries', 'readmes', 'npm'):
             kwargs[artifact_type] = True
 
         else:
-            bot.reply("invalid artifact type `{}`".format(artifact_type))
+            bot.reply(f"invalid artifact type `{artifact_type}`")
             return
 
     async with bot.require_lock(L_RELEASE):

@@ -46,9 +46,7 @@ class EdgeType(Enum):
         return None
 
     def edge_key(self, forward: bool) -> str:
-        if forward:
-            return self.value + '_forward'
-        return self.value + '_backward'
+        return f'{self.value}_forward' if forward else f'{self.value}_backward'
 
     @staticmethod
     def reversed_edge_key(k: str) -> str:

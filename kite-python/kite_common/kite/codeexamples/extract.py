@@ -221,10 +221,11 @@ class SnippetExtractor(ast.NodeVisitor):
             self.cur_incantations = []
 
             self.generic_visit(node)
-            if (not self.curated and
-                    (len(self.cur_incantations) > 0 or
-                     len(self.cur_decorators) > 0 or
-                     len(self.cur_attributes) > 0)):
+            if not self.curated and (
+                self.cur_incantations
+                or len(self.cur_decorators) > 0
+                or len(self.cur_attributes) > 0
+            ):
                 # Note: node.lineno is 1-based!
                 code = '\n'.join(
                     self.lines[node.lineno-1:self.max_func_lineno])
@@ -302,7 +303,7 @@ class SnippetExtractor(ast.NodeVisitor):
         # of the argument points directly to a builtin, use that
         # builtin's type
         def fake_resolve_builtin(scope, name, resolved, literal):
-            if scope == "builtin" and "__builtin__."+name == resolved:
+            if scope == "builtin" and f"__builtin__.{name}" == resolved:
                 attr = getattr(__builtin__, name)
                 if inspect.isclass(attr):
                     resolved = "types.TypeType"
@@ -312,7 +313,7 @@ class SnippetExtractor(ast.NodeVisitor):
                     resolved = ""
                 literal = name
                 name = ""
-            if scope == "types" and "types."+name == resolved:
+            if scope == "types" and f"types.{name}" == resolved:
                 resolved = "types.Type"
             return name, resolved, literal
 

@@ -18,9 +18,7 @@ def read_logs(filename: str) -> pd.DataFrame:
     with open(filename, 'r') as f:
         lines = f.readlines()
 
-    records = []
-    for line in tqdm.tqdm(lines):
-        records.append(_process_record(json.loads(line)))
+    records = [_process_record(json.loads(line)) for line in tqdm.tqdm(lines)]
     df = pd.io.json.json_normalize(records)
 
     df['timestamp'] = pd.to_datetime(df['timestamp'])
@@ -123,7 +121,7 @@ def daily_user_agg(
         elif agg_type == AggType.MEDIAN:
             user_agg = grouped.median()
         else:
-            raise ValueError("unknown agg type: {}".format(agg_type))
+            raise ValueError(f"unknown agg type: {agg_type}")
 
         # at this point we should have a series that has either one value for the given day (or zero if there are
         # no users)

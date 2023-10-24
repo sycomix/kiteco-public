@@ -6,7 +6,7 @@
 from scipy.version import version
 
 if version != "0.15.1":
-	print("Warning: scipy version is %s. Try pip install scipy==0.15.1" % version)
+	print(f"Warning: scipy version is {version}. Try pip install scipy==0.15.1")
 
 from gensim.models.word2vec_inner import train_sentence_sg, train_sentence_cbow, FAST_VERSION
 

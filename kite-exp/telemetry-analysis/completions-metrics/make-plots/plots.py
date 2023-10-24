@@ -38,7 +38,7 @@ def plot_series(ax: plt.Axes,
         if len(series[k]) > 0:
             series[k].plot(ax=ax, marker='o')
             plotted.append(k)
-    if len(plotted) > 0:
+    if plotted:
         ax.legend(plotted)
 
     ax.set_title(title)

@@ -97,7 +97,7 @@ class TitleRelatednessFeaturizer(svm.SVMFeaturizer):
                     if m in f or p in f:
                         func_calls.append(
                             ' '.join([p, f.split('.')[-1]]).strip())
-        if len(func_calls) > 0:
+        if func_calls:
             return func_calls
         else:
             return [' '.join([imported_packages[i], m]).strip()
@@ -131,15 +131,8 @@ class TitleRelatednessFeaturizer(svm.SVMFeaturizer):
         """Compute the distance between two arrays of methods."""
         scores = []
 
-        # normalize methods
-        normalized_methods1 = []
-        for m in methods1:
-            normalized_methods1.append(normalize_package_name(m))
-
-        normalized_methods2 = []
-        for m in methods2:
-            normalized_methods2.append(normalize_package_name(m))
-
+        normalized_methods1 = [normalize_package_name(m) for m in methods1]
+        normalized_methods2 = [normalize_package_name(m) for m in methods2]
         for m1 in normalized_methods1:
             vec1 = self.phrase2vec(m1)
             for m2 in normalized_methods2: 
@@ -153,7 +146,7 @@ class TitleRelatednessFeaturizer(svm.SVMFeaturizer):
     def phrase2vec(self, words):
         """Convert an array of words to a vector."""
         try:
-            return sum([self.model[t] for t in words]) / len(words)
+            return sum(self.model[t] for t in words) / len(words)
         except:
             return ones(self.model.layer1_size)
 

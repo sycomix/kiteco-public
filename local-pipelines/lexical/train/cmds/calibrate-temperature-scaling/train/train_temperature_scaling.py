@@ -84,7 +84,7 @@ class Model(BaseModel):
         self._build_model(num_temperature_types)
         self._build_loss()
         self._build_scalars()
-        self._summaries = {k: v for k, v in self._scalars.items()}
+        self._summaries = dict(self._scalars.items())
 
     def _build_model(self, num_temperature_types: int):
         with tf.name_scope('model'):
@@ -157,9 +157,16 @@ def train_gradient_descent(train: str, validate: str, tensorboard: str, steps: i
             sess.run(tf.local_variables_initializer())
             starting_step = 0
 
-            ti = TrainInputs(session=sess, train_feeder=train_feeder, val_feeder=validate_feeder,
-                             summary_writer=sw, summary_interval=10, validation_interval=30,
-                             starting_step=starting_step, checkpoint_interval=int(500))
+            ti = TrainInputs(
+                session=sess,
+                train_feeder=train_feeder,
+                val_feeder=validate_feeder,
+                summary_writer=sw,
+                summary_interval=10,
+                validation_interval=30,
+                starting_step=starting_step,
+                checkpoint_interval=500,
+            )
 
             trainer.train(ti)
             end = datetime.datetime.now()

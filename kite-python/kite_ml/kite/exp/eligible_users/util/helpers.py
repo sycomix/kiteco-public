@@ -25,11 +25,7 @@ def get_dormant_users_by_vacancy(
             consecutive = 0
             last_user = user_id
 
-        if have_vacancies:
-            vac_match = (rec.any_vacancy > 0)
-        else:
-            vac_match = (rec.any_vacancy == 0)
-
+        vac_match = (rec.any_vacancy > 0) if have_vacancies else (rec.any_vacancy == 0)
         if rec.python_events == 0 and vac_match:
             consecutive += 1
         else:

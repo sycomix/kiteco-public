@@ -118,8 +118,7 @@ async def run_pipeline(run_func):
     try:
         await run_func()
     finally:
-        es = connections_var.get().get('elasticsearch_async')
-        if es:
+        if es := connections_var.get().get('elasticsearch_async'):
             await es.transport.close()
 
 

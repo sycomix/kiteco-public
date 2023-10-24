@@ -57,7 +57,7 @@ def main():
 
     # Create a temp dir
     tempdir = tempfile.mkdtemp()
-    print("created temp dir at "+tempdir)
+    print(f"created temp dir at {tempdir}")
     os.makedirs("logs/explore")
     os.makedirs("logs/walk")
     os.mkdir("graph")
@@ -80,52 +80,50 @@ def main():
 
     # Run explore_packages.py for every package
     num_successful = 0
-    explore_failures = open(EXPLORE_FAILURES, "w")
-    for package in packages:
-        if package == '':
-            continue
+    with open(EXPLORE_FAILURES, "w") as explore_failures:
+        for package in packages:
+            if package == '':
+                continue
 
-        print
-        print("*" * 80)
-        print("Starting:  " + package)
+            print
+            print("*" * 80)
+            print(f"Starting:  {package}")
 
-        # Get a list of sub-modules. This requires actually importing various packages
-        # so do it in a subprocess.
-        print("walking...")
-        try:
-            modules = list_submodules(package, tempdir)
-        except Exception as ex:
-            print("list_submodules failed")
-            traceback.print_exc()
-            continue
+            # Get a list of sub-modules. This requires actually importing various packages
+            # so do it in a subprocess.
+            print("walking...")
+            try:
+                modules = list_submodules(package, tempdir)
+            except Exception as ex:
+                print("list_submodules failed")
+                traceback.print_exc()
+                continue
 
-        # Filter out modules that contain any of the blacklisted patterns
-        filtered = []
-        for m in modules:
-            if not any(pattern in m for pattern in BLACKLIST_PATTERN):
-                filtered.append(m)
-        modules = filtered
+            filtered = [
+                m
+                for m in modules
+                if all(pattern not in m for pattern in BLACKLIST_PATTERN)
+            ]
+            modules = filtered
 
-        if len(modules) == 0:
-            print("did not find any submodules -- skipping.")
-            continue
+            if not modules:
+                print("did not find any submodules -- skipping.")
+                continue
 
-        print("exploring...")
-        # Now explore the modules
-        explore_command = EXPLORE_CMD.format(label=package, modules=" ".join(modules))
-        code = run(explore_command, TIMEOUT, "logs/explore/{label}".format(label=package))
+            print("exploring...")
+            # Now explore the modules
+            explore_command = EXPLORE_CMD.format(label=package, modules=" ".join(modules))
+            code = run(explore_command, TIMEOUT, "logs/explore/{label}".format(label=package))
 
-        if code == 0:
-            num_successful += 1
-        else:
-            explore_failures.write(package + "\n")
-            print("explore_packages failed")
+            if code == 0:
+                num_successful += 1
+            else:
+                explore_failures.write(package + "\n")
+                print("explore_packages failed")
 
-        print("Complete: " + package)
-        print("*" * 80)
-        print
-
-    explore_failures.close()
+            print(f"Complete: {package}")
+            print("*" * 80)
+            print
 
     try:
         shutil.rmtree(tempdir)

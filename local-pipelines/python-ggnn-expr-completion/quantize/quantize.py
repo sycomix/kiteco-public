@@ -26,15 +26,18 @@ def main():
 
     # First, determine which variables are quantizable
     Model(config, meta_info, compressed=True)
-    # names of the quantizable variables
-    q_var_names = []
     vars = tf.global_variables()
-    for v in vars:
-        if v.name.endswith("/quantized:0"):
-            q_var_names.append(v.name.replace("/quantized:0", ""))
-
+    q_var_names = [
+        v.name.replace("/quantized:0", "")
+        for v in vars
+        if v.name.endswith("/quantized:0")
+    ]
     # names of the regular (non-quantizable) variables
-    reg_vars = {v.name: v for v in vars if not any([v.name.startswith(q) for q in q_var_names])}
+    reg_vars = {
+        v.name: v
+        for v in vars
+        if not any(v.name.startswith(q) for q in q_var_names)
+    }
     for var_name, var in reg_vars.items():
         print("\nWILL NOT quantize:", var_name)
         print("  shape:", var.shape)
@@ -55,7 +58,7 @@ def main():
     with tf.Session() as sess:
         saver.restore(sess, checkpoint_path)
 
-        var_vals = sess.run({var: var + ":0" for var in q_var_names})
+        var_vals = sess.run({var: f"{var}:0" for var in q_var_names})
 
         for var_name, val in var_vals.items():
             assert val.dtype == np.float32
@@ -70,7 +73,7 @@ def main():
 
             print("\nWILL quantize:", var_name)
             print("  shape:", val.shape)
-            print("  range: {} to {}".format(min_range, max_range))
+            print(f"  range: {min_range} to {max_range}")
             print("  bytes (float32):", int(np.prod(val.shape) * 4))
             print("  bytes (int8):  ", int(np.prod(val.shape)))
 
@@ -78,7 +81,9 @@ def main():
     tf.reset_default_graph()
     model = Model(config, meta_info, compressed=True)
 
-    reg_saver = tf.train.Saver(var_list=[v for v in tf.global_variables() if v.name in reg_vars.keys()])
+    reg_saver = tf.train.Saver(
+        var_list=[v for v in tf.global_variables() if v.name in reg_vars]
+    )
 
     with tf.Session() as sess:
         # set the quantized values along with the min/max ranges
@@ -87,11 +92,24 @@ def main():
             quantized = quantized_vals[var_name]
             min_range, max_range = ranges[var_name]
 
-            sess.run([
-                tf.assign(sess.graph.get_tensor_by_name(var_name + "/quantized:0"), quantized),
-                tf.assign(sess.graph.get_tensor_by_name(var_name + "/min:0"), min_range),
-                tf.assign(sess.graph.get_tensor_by_name(var_name + "/max:0"), max_range),
-                ])
+            sess.run(
+                [
+                    tf.assign(
+                        sess.graph.get_tensor_by_name(
+                            f"{var_name}/quantized:0"
+                        ),
+                        quantized,
+                    ),
+                    tf.assign(
+                        sess.graph.get_tensor_by_name(f"{var_name}/min:0"),
+                        min_range,
+                    ),
+                    tf.assign(
+                        sess.graph.get_tensor_by_name(f"{var_name}/max:0"),
+                        max_range,
+                    ),
+                ]
+            )
 
         # set the regular variables
         reg_saver.restore(sess, checkpoint_path)

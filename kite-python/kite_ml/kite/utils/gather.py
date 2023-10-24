@@ -18,7 +18,7 @@ def gather_elems_2d(params: tf.Tensor, idxs: tf.Tensor, name: str, idxs_2d=False
     :return res: res.shape == idxs.shape and res[i,j] = params[i, idxs[i,j]]
     """
 
-    with tf.name_scope('gather_elems_2d_'+name):
+    with tf.name_scope(f'gather_elems_2d_{name}'):
         if not idxs_2d:
             num_rows = tf.shape(params, name='num_rows')[0]
 

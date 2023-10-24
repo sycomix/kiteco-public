@@ -143,7 +143,7 @@ class ObjectAttributeExtractor(ast.NodeVisitor):
             return
 
         parts = name.split(".")
-        parent = '.'.join(parts[:len(parts)-1])
+        parent = '.'.join(parts[:-1])
 
         # This helps us ignore accidentally grabing methods and classes
         # in modules vs methods/attributes on objects.

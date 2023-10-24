@@ -98,7 +98,7 @@ class Step(object):
         if self._exists(name):
             return name
         for ext in SUPPORTED_EXTENSIONS:
-            fn = "%s.%s" % (name, ext)
+            fn = f"{name}.{ext}"
             if self._exists(fn):
                 return fn
         return None
@@ -142,21 +142,27 @@ class Step(object):
             map_memory = self.params.get("mapreduce_map_memory_mb")
         else:
             map_memory = self.params.get("mapreduce_memory_mb", MEMORY_MB)
-        
+
         if self.params.has_key("mapreduce_reduce_memory_mb"):
             reduce_memory = self.params.get("mapreduce_reduce_memory_mb")
         else:
             reduce_memory = self.params.get("mapreduce_memory_mb", MEMORY_MB)
 
-        args = [ 'hadoop-streaming',
-            "-D", "mapreduce.map.memory.mb=%s" % str(map_memory),
-            "-D", "mapreduce.map.java.opts=%s" % (
-                   "-Xmx"+str(int(map_memory-64))+"m"),
-            "-D", "mapreduce.reduce.memory.mb=%s" % str(reduce_memory),
-            "-D", "mapreduce.reduce.java.opts=%s" % (
-                   "-Xmx"+str(int(reduce_memory-64))+"m"),
-            "-D", "mapreduce.job.jvm.numtasks=1",
-            "-D", "dfs.replication=2"]
+        args = [
+            'hadoop-streaming',
+            "-D",
+            f"mapreduce.map.memory.mb={str(map_memory)}",
+            "-D",
+            f"mapreduce.map.java.opts=-Xmx{int(map_memory - 64)}m",
+            "-D",
+            f"mapreduce.reduce.memory.mb={str(reduce_memory)}",
+            "-D",
+            f"mapreduce.reduce.java.opts=-Xmx{int(reduce_memory - 64)}m",
+            "-D",
+            "mapreduce.job.jvm.numtasks=1",
+            "-D",
+            "dfs.replication=2",
+        ]
 
         if self.params.has_key('mapreduce_reduce_tasks'):
             args.extend(['-D', 'mapreduce.job.reduces=%d' % (
@@ -165,7 +171,7 @@ class Step(object):
         if self.params.has_key('mapreduce_reduce_running_limit'):
             args.extend(['-D', 'mapreduce.job.running.reduce.limit=%d' % (
                 self.params.get('mapreduce_reduce_running_limit'))])
-        
+
         args.extend(['-D', 'mapreduce.map.maxattempts=%d' % (
             self.params.get('mapreduce_map_maxattempts', 1))])
 
@@ -174,14 +180,20 @@ class Step(object):
 
         files = self.files()
         if len(files) > 0:
-            args.extend(['-files', '%s' % ','.join(files)])
+            args.extend(['-files', f"{','.join(files)}"])
 
-        args.extend([
-            '-mapper', '%s' % self.mapper(),
-            '-reducer', '%s' % self.reducer(),
-            '-input', '%s' % ','.join(self._resolve_input(steps)),
-            '-output', '%s' % self._resolve_output(),
-        ])
+        args.extend(
+            [
+                '-mapper',
+                f'{self.mapper()}',
+                '-reducer',
+                f'{self.reducer()}',
+                '-input',
+                f"{','.join(self._resolve_input(steps))}",
+                '-output',
+                f'{self._resolve_output()}',
+            ]
+        )
 
         return {
             'Name': self.name,
@@ -216,9 +228,9 @@ class Pipeline(object):
             identity = params.get('identity', False)
             if not identity:
                 if not os.path.exists(name):
-                    raise Exception("could not find directory for step: %s" % name)
+                    raise Exception(f"could not find directory for step: {name}")
                 if not os.path.isdir(name):
-                    raise Exception("%s is not a directory" % name)
+                    raise Exception(f"{name} is not a directory")
 
             step = Step(name, params, self.path)
             self.steps.append(step)
@@ -250,7 +262,7 @@ class Pipeline(object):
             'InstanceCount': n_core_instances,
             'Configurations': env_configs,
         }
-        
+
         if self.config.has_key('ebs_vol_gb'):
             core['EbsConfiguration'] = {
                 'EbsBlockDeviceConfigs': [
@@ -265,11 +277,7 @@ class Pipeline(object):
                 'EbsOptimized': False,
             }
 
-        # see http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-instances.html
-        master_type = 'm3.xlarge'
-        if n_core_instances > 49:
-            master_type = 'm3.2xlarge'
-
+        master_type = 'm3.2xlarge' if n_core_instances > 49 else 'm3.xlarge'
         return {
             'InstanceGroups': [
                 {
@@ -306,9 +314,9 @@ class Pipeline(object):
     def wait(self):
         """Wait for job to complete."""
 
-        if self.jobid == None:
+        if self.jobid is None:
             raise Exception("job hasn't started yet!")
-        
+
         exit_states = [u'COMPLETED', u'FAILED', u'TERMINATED']
 
         state, prev = None, None
@@ -324,21 +332,21 @@ class Pipeline(object):
             state = cluster['Status']['State']
             if state != prev:
                 ts = time.strftime('%Y-%m-%d %I:%M:%S %p')
-                print("%s %s %s" % (ts, self.jobid, state))
+                print(f"{ts} {self.jobid} {state}")
                 prev = state
             time.sleep(30)
 
     def run(self):
         """Start and wait for pipeline."""
         self.start()
-        print("view job at: %s" % (JOBURL_TEMPLATE % self.jobid))
+        print(f"view job at: {JOBURL_TEMPLATE % self.jobid}")
         self.wait()
 
     def describe(self):
         """Describe the pipeline steps."""
 
-        print("base: %s" % self.path.path)
-        print("s3 base: %s" % self.path.s3_path())
+        print(f"base: {self.path.path}")
+        print(f"s3 base: {self.path.s3_path()}")
         print("pipeline steps:")
 
         for step in self.steps:

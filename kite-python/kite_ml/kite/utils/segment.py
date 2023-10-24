@@ -23,9 +23,9 @@ def segment_topk(preds: tf.Tensor, segment_ids: tf.Tensor, k: int,
         and probs.shape == idxs.shape == ids.shape.
         """
         def opname(suffix: str) -> str:
-            if not prefix:
-                return 'segment_topk_' + suffix
-            return prefix + '_segment_topk_' + suffix
+                if not prefix:
+                        return f'segment_topk_{suffix}'
+                return f'{prefix}_segment_topk_{suffix}'
 
         with _valid_segment(preds, segment_ids, 'preds', opname('')):
             #
@@ -130,7 +130,7 @@ def segment_topk(preds: tf.Tensor, segment_ids: tf.Tensor, k: int,
 
 def segment_maxmargin_loss(logits: tf.Tensor, labels: tf.Tensor,
                            segment_ids: tf.Tensor, corrupted: tf.Tensor, name: str) -> tf.Tensor:
-    """
+        """
     Compute segmented max margin loss:
     SO link: /questions/37689632/max-margin-loss-in-tensorflow
     http://web.stanford.edu/class/cs224n/lectures/lecture4.pdf
@@ -153,35 +153,35 @@ def segment_maxmargin_loss(logits: tf.Tensor, labels: tf.Tensor,
 
     :return: shape []
     """
-    def opname(suffix: str) -> str:
-        return name + '_max_margin_' + suffix
+        def opname(suffix: str) -> str:
+                return f'{name}_max_margin_{suffix}'
 
-    with _valid_segment(corrupted, segment_ids, 'corrupted', opname('')):
-        # [batch size]
-        true_scores: tf.Tensor = tf.gather(logits, labels, name=opname('true_scores'))
+        with _valid_segment(corrupted, segment_ids, 'corrupted', opname('')):
+            # [batch size]
+            true_scores: tf.Tensor = tf.gather(logits, labels, name=opname('true_scores'))
 
-        # broadcast true scores to each corrupted segment in batch
-        # [num corrupted samples]
-        true_scores = tf.gather(true_scores, segment_ids, name=opname('true_scores_broadcast'))
+            # broadcast true scores to each corrupted segment in batch
+            # [num corrupted samples]
+            true_scores = tf.gather(true_scores, segment_ids, name=opname('true_scores_broadcast'))
 
-        # [num corrupted samples]
-        corrupted_scores: tf.Tensor = tf.gather(logits, corrupted, name=opname('corrupted_scores'))
+            # [num corrupted samples]
+            corrupted_scores: tf.Tensor = tf.gather(logits, corrupted, name=opname('corrupted_scores'))
 
-        # to make type checker happy
-        one: tf.Tensor = tf.constant(1.)
+            # to make type checker happy
+            one: tf.Tensor = tf.constant(1.)
 
-        # [num corrupted samples]
-        maxes: tf.Tensor = tf.maximum(0., one - true_scores + corrupted_scores, name=opname('maxes'))
+            # [num corrupted samples]
+            maxes: tf.Tensor = tf.maximum(0., one - true_scores + corrupted_scores, name=opname('maxes'))
 
-        # need to reduce mean across each segment, then across segments
-        means: tf.Tensor = tf.segment_mean(maxes, segment_ids, name=opname('segmented_means'))
+            # need to reduce mean across each segment, then across segments
+            means: tf.Tensor = tf.segment_mean(maxes, segment_ids, name=opname('segmented_means'))
 
-        # shape []
-        return safe_reduce_mean(means, 0., name=name)
+            # shape []
+            return safe_reduce_mean(means, 0., name=name)
 
 
 def segment_softmax(logits: tf.Tensor, segment_ids: tf.Tensor, name: str) -> tf.Tensor:
-    """
+        """
     Compute segmented softmax:
     - N = len(logits)
     - B = number of segments
@@ -199,34 +199,34 @@ def segment_softmax(logits: tf.Tensor, segment_ids: tf.Tensor, name: str) -> tf.
     :param name: name of the resulting operation
     :return val: val.shape == logits.shape
     """
-    def opname(suffix: str) -> str:
-        return name + '_segment_softmax_' + suffix
+        def opname(suffix: str) -> str:
+                return f'{name}_segment_softmax_{suffix}'
 
-    with _valid_segment(logits, segment_ids, 'logits', opname('')):
-        # [B]
-        maxes: tf.Tensor = tf.segment_max(logits, segment_ids, name=opname('maxes'))
+        with _valid_segment(logits, segment_ids, 'logits', opname('')):
+            # [B]
+            maxes: tf.Tensor = tf.segment_max(logits, segment_ids, name=opname('maxes'))
 
-        # distribute max back out to each logit based on segment
-        # [N]
-        maxes_expanded: tf.Tensor = tf.gather(maxes, segment_ids, name=opname('maxes_expanded'))
+            # distribute max back out to each logit based on segment
+            # [N]
+            maxes_expanded: tf.Tensor = tf.gather(maxes, segment_ids, name=opname('maxes_expanded'))
 
-        # subtract max and exponentiate
-        # [N]
-        numerator: tf.Tensor = tf.exp(logits - maxes_expanded, name=opname('numerator'))
+            # subtract max and exponentiate
+            # [N]
+            numerator: tf.Tensor = tf.exp(logits - maxes_expanded, name=opname('numerator'))
 
-        # sum along segments to compute denominators
-        # [B]
-        denominator: tf.Tensor = tf.segment_sum(numerator, segment_ids, name=opname('denominator'))
+            # sum along segments to compute denominators
+            # [B]
+            denominator: tf.Tensor = tf.segment_sum(numerator, segment_ids, name=opname('denominator'))
 
-        # distribute denominator back out to size N
-        # [N]
-        denominator = tf.gather(denominator, segment_ids, name=opname('denominator_expanded'))
+            # distribute denominator back out to size N
+            # [N]
+            denominator = tf.gather(denominator, segment_ids, name=opname('denominator_expanded'))
 
-        return tf.div(numerator, denominator, name=name)
+            return tf.div(numerator, denominator, name=name)
 
 
 def segment_accuracy(pred: tf.Tensor, labels: tf.Tensor, segment_ids: tf.Tensor, topk: int) -> tf.Tensor:
-    """
+        """
     Compute segmented accuracy at k.
 
     Typically the segments correspond to different samples in a batch
@@ -244,38 +244,38 @@ def segment_accuracy(pred: tf.Tensor, labels: tf.Tensor, segment_ids: tf.Tensor,
     :return: 0D tensor representing the accuracy at k
     """
 
-    def opname(suffix: str) -> str:
-        return 'segment_accuracy_' + suffix
+        def opname(suffix: str) -> str:
+                return f'segment_accuracy_{suffix}'
 
-    _, idxs, sample_ids = segment_topk(
-        pred, segment_ids, topk, opname('top_{}'.format(topk)),
-    )
-
-    if topk == 1:
-        # idxs has shape [num calls in batch]
-        return safe_reduce_mean(
-            tf.cast(tf.equal(labels, idxs), dtype=tf.float32),
-            0., opname('accuracy'),
+        _, idxs, sample_ids = segment_topk(
+            pred, segment_ids, topk, opname('top_{}'.format(topk)),
         )
 
-    # expand true labels to same shape as idxs via sample ids
-    true_labels: tf.Tensor = tf.gather(
-        labels, sample_ids, opname('true_labels'),
-    )
+        if topk == 1:
+            # idxs has shape [num calls in batch]
+            return safe_reduce_mean(
+                tf.cast(tf.equal(labels, idxs), dtype=tf.float32),
+                0., opname('accuracy'),
+            )
 
-    atk: tf.Tensor = tf.cast(
-        tf.equal(true_labels, idxs), tf.float32, opname('at_{}'.format(topk)),
-    )
+        # expand true labels to same shape as idxs via sample ids
+        true_labels: tf.Tensor = tf.gather(
+            labels, sample_ids, opname('true_labels'),
+        )
 
-    # sum over sample first, then mean over batch, this works because exactly
-    # one label per task will match so this sum is equivalent to a logical or over each sample
-    return safe_reduce_mean(
-        tf.segment_sum(atk, sample_ids), 0., opname('acc_at_{}'.format(topk)),
-    )
+        atk: tf.Tensor = tf.cast(
+            tf.equal(true_labels, idxs), tf.float32, opname('at_{}'.format(topk)),
+        )
+
+        # sum over sample first, then mean over batch, this works because exactly
+        # one label per task will match so this sum is equivalent to a logical or over each sample
+        return safe_reduce_mean(
+            tf.segment_sum(atk, sample_ids), 0., opname('acc_at_{}'.format(topk)),
+        )
 
 
 def normalize_segment_ids(segment_ids: tf.Tensor, unique_idxs: Optional[tf.Tensor], name: Optional[str]) -> tf.Tensor:
-    """
+        """
     Normalize the provided segment ids to be in a contiguos range between 0,...,len(set(segment_ids)).
     NOTE: segment_ids MUST be sorted and non negative. TODO: check this or just sort automatically?
     :param segment_ids: 1D tensor, len N
@@ -286,27 +286,28 @@ def normalize_segment_ids(segment_ids: tf.Tensor, unique_idxs: Optional[tf.Tenso
     TODO: unit test!!!!
     TODO: add some checks?
     """
-    def opname(suffix: str) -> str:
-        return name + '_' + suffix
-    if unique_idxs is not None:
-        _, unique_idxs = tf.unique(segment_ids, name=opname('uniqueify'))
-    return tf.identity(unique_idxs, name=name)
+        def opname(suffix: str) -> str:
+                return f'{name}_{suffix}'
+
+        if unique_idxs is not None:
+            _, unique_idxs = tf.unique(segment_ids, name=opname('uniqueify'))
+        return tf.identity(unique_idxs, name=name)
 
 
 def _valid_segment(params: tf.Tensor, segment_ids: tf.Tensor, params_name: str, name: str):
-    def opname(suffix: str) -> str:
-        return name + '_valid_segment_' + suffix
+        def opname(suffix: str) -> str:
+                return f'{name}_valid_segment_{suffix}'
 
-    assert_shape = tf.assert_equal(
-        tf.shape(segment_ids), tf.shape(params),
-        message='segment_ids and {} must have same shape'.format(params_name),
-        name=opname('assert_rank'),
-    )
+        assert_shape = tf.assert_equal(
+            tf.shape(segment_ids), tf.shape(params),
+            message='segment_ids and {} must have same shape'.format(params_name),
+            name=opname('assert_rank'),
+        )
 
-    assert_rank = tf.assert_rank(
-        segment_ids, 1,
-        message='segment_ids must be rank 1',
-        name=opname('assert_rank'),
-    )
+        assert_rank = tf.assert_rank(
+            segment_ids, 1,
+            message='segment_ids must be rank 1',
+            name=opname('assert_rank'),
+        )
 
-    return tf.control_dependencies([assert_shape, assert_rank])
+        return tf.control_dependencies([assert_shape, assert_rank])

@@ -38,9 +38,7 @@ class Aggregator:
         self.cuts: List[float] = list(np.percentile(values, self.pcts))
 
     def get_bucket(self, value: float) -> int:
-        if value == self.cuts[0]:
-            return 0
-        return bisect.bisect_left(self.cuts, value) - 1
+        return 0 if value == self.cuts[0] else bisect.bisect_left(self.cuts, value) - 1
 
     def add_batch(self, batch: List[Tuple[float, bool]]) -> None:
         for value, is_relevant in batch:
@@ -120,11 +118,11 @@ def analyze(
         width: int,
     ) -> Tuple[Aggregator, Aggregator]:
 
-    pcts = [float(d) for d in range(0, 101, int(width))]
+    pcts = [float(d) for d in range(0, 101, width)]
     loc = Aggregator(pcts)
     glob = Aggregator(pcts)
     glob.set_cuts([v for batch in data.values() for v, _ in batch])
-    for label, batch in data.items():
+    for batch in data.values():
         loc.set_cuts([v for v, _ in batch])
         loc.add_batch(batch)
         glob.add_batch(batch)

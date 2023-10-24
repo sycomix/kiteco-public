@@ -22,11 +22,11 @@ os.makedirs(TENSORBOARD, exist_ok=True)
 def run(cmd: str, in_dir=RUN_DIR):
     logging.info(f"running: {cmd}")
 
-    cmd = f"set -e\ncd {in_dir}\n" + cmd
+    cmd = f"set -e\ncd {in_dir}\n{cmd}"
 
     ret = os.system(cmd)
     if ret != 0:
-        raise RuntimeError("running '{}' returned non-zero status: {}".format(cmd, ret))
+        raise RuntimeError(f"running '{cmd}' returned non-zero status: {ret}")
 
 
 def write_file(filename: str, contents: str, rel_dir=RUN_DIR):
@@ -54,14 +54,15 @@ make clean MODEL_NAME={experiment_name}
 def stop_graph_server():
     logging.info("stopping graph server...")
     try:
-        run(f"""killall graph-data-server""")
+        run("""killall graph-data-server""")
     except Exception as exc:
         logging.info("no graph server running")
 
 
 def wait_for_graph_server():
     logging.info("waiting for graph server...")
-    run(f"""
+    run(
+        """
 while true; do
     if curl http://localhost:3039/some_bogus_page 2>&1 | grep -q '404 page not found'
     then
@@ -69,25 +70,27 @@ while true; do
     fi
     sleep 10
 done
-""")
+"""
+    )
 
 
 def test_branch(branch: str, validate: bool = True):
     experiment_name = branch
-    packagelist_file = f"tmp/packagelist.txt"
+    packagelist_file = "tmp/packagelist.txt"
     out_dir = os.path.join(OUT, experiment_name)
     log_dir = os.path.join(OUT, experiment_name, "logs")
     tensorboard_dir = os.path.join(TENSORBOARD, experiment_name)
 
-    logging.info(f"testing branch {branch}, steps={STEPS}")
-
+    logging.info(f"testing branch {experiment_name}, steps={STEPS}")
     stop_graph_server()
 
     logging.info("setting up...")
-    run(f"""
-git checkout {branch}
+    run(
+        f"""
+git checkout {experiment_name}
 mkdir -p tmp {log_dir}
-""")
+"""
+    )
     write_file(packagelist_file, "\n".join(PACKAGELIST))
 
     start_graph_server(log_dir)

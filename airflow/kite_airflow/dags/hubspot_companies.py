@@ -50,7 +50,7 @@ def write_company_assignments(ti, **ctx):
     logger.info("Fetching company list")
     supported_companies = [rec[0] for rec in ti.xcom_pull(task_ids='get_companies_sheet')['values']]
     for company in supported_companies:
-        logger.info("Starting processing for company {}".format(company))
+        logger.info(f"Starting processing for company {company}")
         params = {
             'limit': 100,
             'filterGroups': [{'filters': [
@@ -63,7 +63,7 @@ def write_company_assignments(ti, **ctx):
         while True:
             resp = make_hubspot_request('crm/v3/objects/contacts/search', params).json()
             if resp['total'] == 0:
-                raise Exception('No results for company "{}". Is it mis-spelled?'.format(company))
+                raise Exception(f'No results for company "{company}". Is it mis-spelled?')
 
             for res in resp['results']:
                 mp_client.people_set(
@@ -72,7 +72,7 @@ def write_company_assignments(ti, **ctx):
                     meta={'$ignore_time': 'true', '$ip': 0})
                 n_done += 1
 
-            logger.info("  {} / {} records processed".format(n_done, resp['total']))
+            logger.info(f"  {n_done} / {resp['total']} records processed")
 
             after = resp.get('paging', {}).get('next', {}).get('after')
             if not after:

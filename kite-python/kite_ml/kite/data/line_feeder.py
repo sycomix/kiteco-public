@@ -56,25 +56,20 @@ class LineFeeder(DataFeeder):
             self._mark_done()
 
         self._filename = self._choose_next_file()
-        logging.info('starting to read {}'.format(self._filename))
+        logging.info(f'starting to read {self._filename}')
         self._file =self._open(self._filename)
         self._count = 0
 
     def _open(self, filename: str):
         path = os.path.join(self._in_dir, filename)
-        if self._ext.endswith('.gz'):
-
-            return gzip.open(path, 'r')
-        return open(path, 'r')
+        return gzip.open(path, 'r') if self._ext.endswith('.gz') else open(path, 'r')
 
     def _mark_done(self):
         self._already_read.add(self._filename)
 
     def _choose_next_file(self) -> str:
         while True:
-            candidates = self._candidates()
-
-            if candidates:
+            if candidates := self._candidates():
                 return candidates[0]
 
             if self._cycle:

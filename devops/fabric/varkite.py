@@ -9,6 +9,6 @@ from fabric.operations import get, put
 @task
 def backup():
     ts = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    run("tar -cvzf varkite-backup-%s.tar.gz /var/kite" % ts)
-    get(remote_path="varkite-backup-%s.tar.gz" % ts, local_path="backup/")
+    run(f"tar -cvzf varkite-backup-{ts}.tar.gz /var/kite")
+    get(remote_path=f"varkite-backup-{ts}.tar.gz", local_path="backup/")
     run("rm varkite-backup-*.tar.gz")

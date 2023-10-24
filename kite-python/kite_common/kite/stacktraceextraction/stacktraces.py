@@ -11,8 +11,10 @@ WEAK_STACKTRACE_PATTERNS_SET = [r"\.[a-z]+:[0-9]+\s?", r"\S+\(.*\)"]
 
 
 def match_known_weak_stacktrace_patterns(line):
-    return any([re.search(weak_pattern, line, re.I)
-                for weak_pattern in WEAK_STACKTRACE_PATTERNS_SET])
+    return any(
+        re.search(weak_pattern, line, re.I)
+        for weak_pattern in WEAK_STACKTRACE_PATTERNS_SET
+    )
 
 def matches_known_stacktrace_patterns(line_one, line_two):
     for strong_match_pattern in STRONG_STACKTRACE_START_PATTERNS:
@@ -40,7 +42,22 @@ def extract_stacktraces_from_string(s):
         next_line = lines[idx + 1].strip()
 
         strength = matches_known_stacktrace_patterns(curr_line, next_line)
-        if within_strong_trace or within_weak_trace:
+        if (
+            not within_strong_trace
+            and not within_weak_trace
+            and strength == STRONG_MATCH
+        ):
+            within_strong_trace = True
+            stacktrace += curr_line + "\n"
+        elif (
+            not within_strong_trace
+            and not within_weak_trace
+            and strength == WEAK_MATCH
+        ):
+            within_weak_trace = True
+            stacktrace += curr_line + "\n"
+
+        elif within_strong_trace or within_weak_trace:
             was_and_no_longer_weak = (within_weak_trace and (strength == NO_MATCH))
             if len(curr_line) == 0 or was_and_no_longer_weak:
                 within_strong_trace = False
@@ -51,14 +68,6 @@ def extract_stacktraces_from_string(s):
                 stacktrace = ""
             else:
                 stacktrace += curr_line + "\n"
-        else:
-            if strength == STRONG_MATCH:
-                within_strong_trace = True
-                stacktrace += curr_line + "\n"
-            elif strength == WEAK_MATCH:
-                within_weak_trace = True
-                stacktrace += curr_line + "\n"
-
     if len(stacktrace) > 0:
         last_line = lines[-1].strip()
         if match_known_weak_stacktrace_patterns(last_line):
@@ -102,11 +111,10 @@ def results_to_string_helper(result):
     return output
 
 def results_to_string(extraction_or_eval_results):
-    output = ""
-    for result in extraction_or_eval_results:
-        output += results_to_string_helper(result)
-
-    return output
+    return "".join(
+        results_to_string_helper(result)
+        for result in extraction_or_eval_results
+    )
 
 def extract_stacktraces_from_file(f):
     extraction_results = []

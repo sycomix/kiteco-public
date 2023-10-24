@@ -21,7 +21,7 @@ def build_client():
                        KITE_TELEMETRY_ES['region'],
                        'es')
 
-    es_client = Elasticsearch(
+    return Elasticsearch(
         hosts=[KITE_TELEMETRY_ES['host']],
         http_auth=awsauth,
         use_ssl=True,
@@ -30,7 +30,6 @@ def build_client():
         retry_on_timeout=True,
         timeout=60,
     )
-    return es_client
 
 
 def make_query(after=None):
@@ -89,9 +88,11 @@ def main():
             break
         if not resp['aggregations']['users'].get('buckets'):
             break
-        for user in resp['aggregations']['users']['buckets']:
-            if len(user['ips']['buckets']):
-                users.append(user)
+        users.extend(
+            user
+            for user in resp['aggregations']['users']['buckets']
+            if len(user['ips']['buckets'])
+        )
         if not resp['aggregations']['users'].get('after_key'):
             break
         after = resp['aggregations']['users']['after_key']

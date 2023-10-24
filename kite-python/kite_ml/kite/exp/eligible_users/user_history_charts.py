@@ -43,11 +43,7 @@ def plot_user_history_chart(filename: str,
                 heatmap[u, d] = 1
                 continue
             on_day = on_day.iloc[0]
-            if on_day.python_events > 0:
-                heatmap[u, d] = 3
-            else:
-                heatmap[u, d] = 2
-
+            heatmap[u, d] = 3 if on_day.python_events > 0 else 2
     plt.figure(figsize=figsize)
 
     colors = ((255, 255, 255),  # unactivated
@@ -61,7 +57,7 @@ def plot_user_history_chart(filename: str,
 
     sns.heatmap(heatmap[:76, :80], linewidth=1, cmap=cmap, cbar=False)
     plt.title(title)
-    plt.xlabel("day, starting at {}".format(start_date.date()))
+    plt.xlabel(f"day, starting at {start_date.date()}")
     plt.ylabel("user")
     plt.savefig(filename, dpi=dpi)
 

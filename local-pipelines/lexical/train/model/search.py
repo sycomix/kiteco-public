@@ -230,13 +230,7 @@ def _expand(sr: SearchResults, sp: SearchParams,  *, candidates, probs, logits) 
 
 def _body(i: int, sr: SearchResults, sp: SearchParams, *, candidates, probs) -> Tuple[SearchResults, tf.Tensor, tf.Tensor]:
     with tf.name_scope('next_logits'):
-        if i == -1:
-            # explicitly pass in None for candidates to avoid clients trying to
-            # use these results
-            logits = sp.next_logits(-1, None)
-        else:
-            logits = sp.next_logits(i, candidates)
-
+        logits = sp.next_logits(-1, None) if i == -1 else sp.next_logits(i, candidates)
     with tf.name_scope('expand'):
         return _expand(sr, sp, candidates=candidates, probs=probs, logits=logits)
 

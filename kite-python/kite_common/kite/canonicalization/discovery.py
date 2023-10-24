@@ -210,7 +210,7 @@ def match(a, b):
 			pairs.append((i, j))
 			j += 1
 		else:
-			raise Exception('Invalid pointer: '+str(pointer))
+			raise Exception(f'Invalid pointer: {str(pointer)}')
 
 	# Return the final diff
 	return StringDiff(a, b, pairs, exact_pairs, leftmap, rightmap, total_score)
@@ -227,8 +227,7 @@ def is_compatible(tokens, template):
 				if template[i] == token:
 					next_indices.append(i+1)
 				elif template[i] == WILDCARD:
-					next_indices.append(i)
-					next_indices.append(i+1)
+					next_indices.extend((i, i+1))
 		if not next_indices:
 			return False
 		indices = next_indices
@@ -250,15 +249,14 @@ def tokenize(s):
 			begin = i
 			if not splitter:
 				prevsplit = False
-		else:
-			if splitter:
-				if i != begin:
-					tokens.append(s[begin:i])
-					begin = i
-				prevsplit = True
+		elif splitter:
+			if i != begin:
+				tokens.append(s[begin:i])
+				begin = i
+			prevsplit = True
 
 	if begin != len(s):
-		tokens.append(s[begin:len(s)])
+		tokens.append(s[begin:])
 
 	return tokens
 
@@ -271,9 +269,8 @@ def label_connected_components(num_nodes, edges):
 	def head(k):
 		if leader[k] == k:
 			return k
-		else:
-			leader[k] = head(leader[k])
-			return leader[k]
+		leader[k] = head(leader[k])
+		return leader[k]
 
 	for i, j in edges:
 		hi, hj = head(i), head(j)
@@ -357,10 +354,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 		"""Compute the cost for a template."""
 		cost = 0.
 		for token in template:
-			if token == WILDCARD:
-				cost += WILDCARD_COST
-			else:
-				cost += compute_idf(token)
+			cost += WILDCARD_COST if token == WILDCARD else compute_idf(token)
 		return cost
 
 	def leaf_cost(leaf, template):
@@ -368,7 +362,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 		diff = match(leaf, template)
 
 		# Can only diff when left is compatible with template
-		assert diff.compatible(), "not compatible: '%s' and '%s'" % (diff.left, diff.right)
+		assert diff.compatible(), f"not compatible: '{diff.left}' and '{diff.right}'"
 
 		# Find the number of unexplained words, which are the words matched with wildcards
 		cost = 0.
@@ -433,7 +427,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 				n_clusters=NUM_CLUSTERS,
 				affinity='precomputed',
 				eigen_solver='amg')
-			
+
 			labels = cl.fit_predict(affinity)
 
 		else:
@@ -455,7 +449,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 						n_clusters=local_num_clusters,
 						affinity='precomputed',
 						eigen_solver='amg')
-					
+
 					local_labels = cl.fit_predict(affinity[component, component])
 
 				# Propagate labels to global list
@@ -483,9 +477,6 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 						template = match(template, tokens).make_template()
 			templates.append(template)
 
-	########################################
-	# AGGLOMERATIVE CLUSTERING
-	########################################
 	elif algorithm == 'flat_agglomerative':
 		# The total cost of an ontology is:
 		#   sum(IDF for each word) + WILDCARD_COST * nwildcards
@@ -521,7 +512,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 
 		# Agglomerate
 		print('Beginning agglomeration...')
-		while len(candidates) > 0:
+		while candidates:
 			# Pop the top element
 			c = heapq.heappop(candidates)
 			assert c.i != c.j
@@ -598,7 +589,7 @@ def discover_templates(tokenvecs, min_members=5, algorithm='flat_agglomerative')
 				rejected_templates.add(template_string(super_template))
 
 	else:
-		raise Exception('Invalid algorithm: "%s"' % algorithm)
+		raise Exception(f'Invalid algorithm: "{algorithm}"')
 
 	# Print the final templates with the errors that matched to each
 	print('\nFinal templates:\n')

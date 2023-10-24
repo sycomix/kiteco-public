@@ -185,8 +185,10 @@ def test():
     def _check_expected(self, code, expected):
         attrs = inference.get_obj_attributes(code)
         self.assertEqual(
-            len(expected), len(attrs),
-            "expected %s got %s" % (expected, [x.to_json() for x in attrs]))
+            len(expected),
+            len(attrs),
+            f"expected {expected} got {[x.to_json() for x in attrs]}",
+        )
         for attr in attrs:
             self.assertIn((attr.parent, attr.ident), expected)
 

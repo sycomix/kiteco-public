@@ -59,9 +59,7 @@ def read_graph(title, data, templates=None):
     # delete metrics items since we don't want to pass it in
     del data["metrics"]
 
-    # create graph(s)
-    graphs = Graph.new(title, metrics, **data)
-    return graphs
+    return Graph.new(title, metrics, **data)
 
 def read_metric(metrics_data):
     """Construct metrics from the given data"""
@@ -97,9 +95,7 @@ def read_dashboard(name, data, graph_templates=None, dashboard_templates=None):
     # delete metrics items since we don't want to pass it in
     del data["graphs"]
 
-    # create dashboard(s)
-    dashboards = Dashboard.new(name, graphs=graphs, **data)
-    return dashboards
+    return Dashboard.new(name, graphs=graphs, **data)
 
 def append_or_extend(dest, items):
     """Append or extend"""

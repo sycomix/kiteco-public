@@ -104,19 +104,19 @@ def _is_in_last_phase(step):
         JobPhase.id != step.phase_id,
         or_(
             JobPhase.date_started > step.phase.date_started,
-            JobPhase.date_started == None,  # NOQA
-        )
+            JobPhase.date_started is None,
+        ),
     )
 
     return not db.session.query(jobphase_query.exists()).scalar()
 
 
 def _has_tests(step):
-    has_tests = db.session.query(TestCase.query.filter(
-        TestCase.step_id == step.id,
-    ).exists()).scalar()
-
-    return has_tests
+    return db.session.query(
+        TestCase.query.filter(
+            TestCase.step_id == step.id,
+        ).exists()
+    ).scalar()
 
 
 def has_test_failures(step):
@@ -162,10 +162,7 @@ def has_timed_out(step, jobplan, default_timeout):
         timeout += 60 * _SNAPSHOT_TIMEOUT_BONUS_MINUTES
 
     delta = datetime.utcnow() - start_time
-    if delta.total_seconds() > timeout:
-        return True
-
-    return False
+    return delta.total_seconds() > timeout
 
 
 def record_coverage_stats(step):
@@ -391,10 +388,7 @@ def sync_job_step(step_id):
                 current_app.logger.warning(
                     "Timed out jobstep that wasn't in progress: %s (was %s)", step.id, old_status)
 
-        if step.status != Status.in_progress:
-            retry_after = QUEUED_RETRY_DELAY
-        else:
-            retry_after = None
+        retry_after = QUEUED_RETRY_DELAY if step.status != Status.in_progress else None
         raise sync_job_step.NotFinished(retry_after=retry_after)
 
     # Ignore any 'failures' if the build did not finish properly.
@@ -489,4 +483,4 @@ def _report_jobstep_result(step):
     label = labels.get(step.result, 'OTHER')
     # TODO(kylec): Include the project slug in the metric so we can
     # track on a per-project basis if needed.
-    statsreporter.stats().incr('jobstep_result_' + label)
+    statsreporter.stats().incr(f'jobstep_result_{label}')

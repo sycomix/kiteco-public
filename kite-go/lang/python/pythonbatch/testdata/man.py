@@ -13,7 +13,7 @@ m = Man()
 m.car()
 
 def print_code():
-    print(k.code + " " + m.code)
+    print(f"{k.code} {m.code}")
 
 def some_kite():
     return Kite()

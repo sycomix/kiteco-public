@@ -86,9 +86,8 @@ def make_relevant(
     for code, quip, pull in triples:
         if not any(code.endswith(ext) for ext in extensions):
             continue
-        if any(blocker in code for blocker in blockers):
-            continue
-        relevant[code][quip].append(pull)
+        if all(blocker not in code for blocker in blockers):
+            relevant[code][quip].append(pull)
     return relevant
 
 

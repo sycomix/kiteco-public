@@ -24,7 +24,7 @@ def main():
     config = Config()
 
     feature_encoder = KeywordModelEncoder(config)
-    print("Features : {}".format(feature_encoder.get_features_str()))
+    print(f"Features : {feature_encoder.get_features_str()}")
 
     print("feature encoder: in_size={0}, out_size={1}".format(feature_encoder.in_size(), feature_encoder.out_size()))
     print("features:")
@@ -35,10 +35,9 @@ def main():
 
     all_data = Dataset(config=config).load(dataset_path, max_count=-1)
 
-    filtered_records = []
-    for i, rec in enumerate(all_data.records):
-        if i not in item_to_skip:
-            filtered_records.append(rec)
+    filtered_records = [
+        rec for i, rec in enumerate(all_data.records) if i not in item_to_skip
+    ]
     all_data.records = filtered_records
 
     kw_data = all_data.filter(lambda rec: rec.is_keyword == 1)

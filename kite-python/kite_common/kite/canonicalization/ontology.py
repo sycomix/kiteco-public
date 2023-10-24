@@ -32,7 +32,7 @@ def regex_from_format_string(s):
         # First consider replacing a "%x" string with the corresponding regex
         for key, replacement in REPLACEMENTS.items():
             if s[pos:].startswith(key):
-                regex += '(' + replacement + ')'
+                regex += f'({replacement})'
                 pos += len(key)
                 done = True
                 break
@@ -52,7 +52,7 @@ def regex_from_format_string(s):
                 # escape this character
                 regex += '\\' + s[pos]
             pos += 1
-    return regex + '$'
+    return f'{regex}$'
 
 
 class ErrorContent(object):
@@ -72,10 +72,7 @@ class Pattern(object):
 
     def match(self, s):
         m = self._compiled.match(s)
-        if m is None:
-            return None
-        else:
-            return ErrorContent(s, self, m.group(0), m.groups())
+        return None if m is None else ErrorContent(s, self, m.group(0), m.groups())
 
 
 class Ontology(object):

@@ -67,16 +67,14 @@ class Example:
 
     def format_relevant(self) -> str:
         retrieved_set = set(self.retrieved)
-        missing = [
-            format_path(r)
-            for r in self.relevant
-            if r not in retrieved_set
-        ]
-        if not missing:
+        if missing := [
+            format_path(r) for r in self.relevant if r not in retrieved_set
+        ]:
+            return "\n".join(
+                ["### Relevant but not retrieved:"] + [f"- {r}" for r in missing]
+            )
+        else:
             return ""
-        return "\n".join(
-            ["### Relevant but not retrieved:"] + [f"- {r}" for r in missing]
-        )
 
 
 class DocSet:
@@ -90,10 +88,8 @@ class DocSet:
                 valid_docs.add(doc)
         self.relevant = {}
         for k, docs in relevant.items():
-            valids = [doc for doc in docs if doc in valid_docs]
-            if not valids:
-                continue
-            self.relevant[k] = valids
+            if valids := [doc for doc in docs if doc in valid_docs]:
+                self.relevant[k] = valids
 
     def format_documents(self) -> str:
         documents = sorted({doc for c in self.relevant.values() for doc in c})
